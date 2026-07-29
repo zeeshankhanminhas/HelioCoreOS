@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { saveProposal, updateOpportunity, updateReadiness } from "../actions";
+import { updateOpportunity, updateReadiness } from "../actions";
+import { ProposalGovernance } from "./proposal-governance";
 import { RelationshipAssignment } from "./relationship-assignment";
 
 const labels: Record<string, string> = {
@@ -13,7 +14,6 @@ const labels: Record<string, string> = {
   survey_authorisation: "Survey authorisation",
 };
 const readinessStatuses = ["requested", "uploaded", "accepted", "rejected", "waived"];
-const proposalStatuses = ["draft", "issued", "accepted", "declined", "expired"];
 const opportunityStages = ["lead", "qualified", "readiness", "proposal", "won", "lost"];
 
 function titleCase(value: string) {
@@ -107,10 +107,18 @@ export default async function OpportunityPage({ params, searchParams }: { params
         <div className="divide-y divide-[var(--line)]">{readiness?.map((item) => <form key={item.id} action={updateReadiness} className="grid gap-4 p-5 lg:grid-cols-[220px_160px_1fr_1fr_auto] lg:items-end"><input type="hidden" name="opportunity_id" value={id} /><input type="hidden" name="item_type" value={item.item_type} /><div><p className="text-sm font-semibold">{labels[item.item_type] ?? titleCase(item.item_type)}</p><p className="mt-1 text-xs text-[var(--muted)]">Current: {titleCase(item.status)}</p></div><label className="text-xs font-semibold">Status<select name="status" defaultValue={item.status} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{readinessStatuses.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label><label className="text-xs font-semibold">Evidence link<input name="evidence_url" defaultValue={item.evidence_url ?? ""} placeholder="Drive or storage URL" className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold">Review note<input name="review_note" defaultValue={item.review_note ?? ""} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><button className="min-h-10 border border-[var(--line)] px-4 text-xs font-semibold">Save</button></form>)}</div>
       </section>
 
-      <section className="mt-7 border border-[var(--line)]">
-        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Indicative proposal</p><h2 className="mt-2 text-2xl font-medium">Commercial position</h2><p className="mt-2 text-sm text-[var(--muted)]">Indicative only, before survey, approved design and final BOM.</p></div>
-        <form action={saveProposal} className="grid gap-5 p-5 md:grid-cols-2 md:p-6"><input type="hidden" name="opportunity_id" value={id} /><label className="text-xs font-semibold">Proposal number<input required name="proposal_number" defaultValue={proposal?.proposal_number ?? `${opportunity.reference}-P01`} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal uppercase" /></label><label className="text-xs font-semibold">Status<select name="status" defaultValue={proposal?.status ?? "draft"} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{proposalStatuses.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label><label className="text-xs font-semibold">PV capacity (kWp)<input name="pv_capacity_kwp" type="number" min="0" step="0.01" defaultValue={proposal?.pv_capacity_kwp ?? opportunity.estimated_pv_kwp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold">Battery capacity (kWh)<input name="battery_capacity_kwh" type="number" min="0" step="0.01" defaultValue={proposal?.battery_capacity_kwh ?? opportunity.estimated_battery_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold">Estimated generation (kWh/year)<input name="estimated_generation_kwh" type="number" min="0" step="0.01" defaultValue={proposal?.estimated_generation_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold">Estimated annual saving (£)<input name="estimated_annual_saving_gbp" type="number" min="0" step="0.01" defaultValue={proposal?.estimated_annual_saving_gbp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold">Indicative price (£)<input name="indicative_price_gbp" type="number" min="0" step="0.01" defaultValue={proposal?.indicative_price_gbp ?? opportunity.estimated_value_gbp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold">Valid until<input name="valid_until" type="date" defaultValue={proposal?.valid_until ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold md:col-span-2">Assumptions<textarea name="assumptions" rows={4} defaultValue={proposal?.assumptions ?? ""} className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-3 text-sm font-normal" /></label><label className="text-xs font-semibold md:col-span-2">Exclusions<textarea name="exclusions" rows={4} defaultValue={proposal?.exclusions ?? ""} className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-3 text-sm font-normal" /></label><div className="flex justify-end md:col-span-2"><button className="min-h-11 border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)]">Save indicative proposal</button></div></form>
-      </section>
+      <ProposalGovernance
+        opportunityId={id}
+        opportunityReference={opportunity.reference}
+        customerAssigned={Boolean(opportunity.customer_id)}
+        siteAssigned={Boolean(opportunity.site_id)}
+        readinessTotal={total}
+        readinessComplete={accepted}
+        proposal={proposal}
+        estimatedPv={opportunity.estimated_pv_kwp}
+        estimatedBattery={opportunity.estimated_battery_kwh}
+        estimatedValue={opportunity.estimated_value_gbp}
+      />
     </div>
   );
 }
