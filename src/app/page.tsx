@@ -1,12 +1,18 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function Home() {
   let connected = false;
+  let authenticated = false;
 
   try {
     const supabase = await createClient();
-    const { error } = await supabase.from("projects").select("id").limit(1);
+    const [{ error }, { data }] = await Promise.all([
+      supabase.from("projects").select("id").limit(1),
+      supabase.auth.getUser(),
+    ]);
     connected = !error;
+    authenticated = Boolean(data.user);
   } catch {
     connected = false;
   }
@@ -18,7 +24,12 @@ export default async function Home() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--accent)]">Solar EPC Operations</p>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight">HelioCoreOS</h1>
         </div>
-        <span className="text-sm text-[var(--muted)]">Foundation / v0.1</span>
+        <Link
+          href={authenticated ? "/dashboard" : "/login"}
+          className="border border-[var(--foreground)] px-4 py-2 text-sm font-semibold transition hover:bg-[var(--foreground)] hover:text-[var(--background)]"
+        >
+          {authenticated ? "Open dashboard" : "Secure access"}
+        </Link>
       </header>
 
       <section className="mx-auto grid max-w-5xl gap-6 py-20 md:grid-cols-[1.4fr_0.6fr]">
@@ -30,6 +41,14 @@ export default async function Home() {
           <p className="mt-7 max-w-2xl text-lg leading-8 text-[var(--muted)]">
             Commercial, engineering, procurement, installation, quality, commissioning and handover—structured as one connected operating model.
           </p>
+          <div className="mt-9">
+            <Link
+              href={authenticated ? "/dashboard" : "/login"}
+              className="inline-block bg-[var(--foreground)] px-6 py-3 text-sm font-semibold text-[var(--background)]"
+            >
+              {authenticated ? "Continue to workspace" : "Sign in or create workspace"}
+            </Link>
+          </div>
         </div>
 
         <aside className="self-end border border-[var(--line)] p-6">
@@ -40,8 +59,8 @@ export default async function Home() {
           </div>
           <p className="mt-4 text-sm leading-6 text-[var(--muted)]">
             {connected
-              ? "The application can reach the HelioCoreOS project database."
-              : "Add the two public Supabase variables and apply the initial migration."}
+              ? "Database connectivity and the governed authentication entry point are available."
+              : "Add the two public Supabase variables and apply the project migrations."}
           </p>
         </aside>
       </section>
