@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { saveProposal, updateOpportunity, updateReadiness } from "../actions";
+import { RelationshipAssignment } from "./relationship-assignment";
 
 const labels: Record<string, string> = {
   electricity_bill: "Electricity bill",
@@ -56,7 +57,11 @@ export default async function OpportunityPage({ params, searchParams }: { params
   return (
     <div className="mx-auto max-w-[1500px]">
       <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 md:flex-row md:items-end md:justify-between">
-        <div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Opportunity command view</p><h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">{opportunity.title}</h1><p className="mt-4 text-sm text-[var(--muted)]">{opportunity.reference} · {customer?.display_name || customer?.name || "Customer unassigned"} · {site?.name || "Site unassigned"}</p></div>
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Opportunity command view</p>
+          <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">{opportunity.title}</h1>
+          <p className="mt-4 text-sm text-[var(--muted)]">{opportunity.reference} · {customer?.display_name || customer?.name || "Customer unassigned"} · {site?.name || "Site unassigned"}</p>
+        </div>
         <Link href="/dashboard/opportunities" className="w-fit border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Return to register</Link>
       </header>
 
@@ -74,15 +79,20 @@ export default async function OpportunityPage({ params, searchParams }: { params
       </section>
 
       <section className="mt-7 border border-[var(--line)]">
-        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Opportunity control</p><h2 className="mt-2 text-2xl font-medium">Core record</h2><p className="mt-2 text-sm text-[var(--muted)]">Update commercial context and move the lifecycle deliberately. Customer and site may remain unassigned during early intake.</p></div>
+        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Relationship control</p><h2 className="mt-2 text-2xl font-medium">Customer and Site assignment</h2><p className="mt-2 text-sm text-[var(--muted)]">Assign governed records after intake. Site choices are filtered by Customer and conflicts are blocked server-side.</p></div>
+        <RelationshipAssignment opportunityId={id} initialCustomerId={opportunity.customer_id} initialSiteId={opportunity.site_id} customers={customersResult.data ?? []} sites={sitesResult.data ?? []} />
+      </section>
+
+      <section className="mt-7 border border-[var(--line)]">
+        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Opportunity control</p><h2 className="mt-2 text-2xl font-medium">Core record</h2><p className="mt-2 text-sm text-[var(--muted)]">Update commercial context and move the lifecycle deliberately.</p></div>
         <form action={updateOpportunity} className="grid gap-5 p-5 md:grid-cols-2 md:p-6">
           <input type="hidden" name="opportunity_id" value={id} />
+          <input type="hidden" name="customer_id" value={opportunity.customer_id ?? ""} />
+          <input type="hidden" name="site_id" value={opportunity.site_id ?? ""} />
           <label className="text-xs font-semibold">Opportunity title<input required maxLength={160} name="title" defaultValue={opportunity.title} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
           <label className="text-xs font-semibold">Reference<input required maxLength={40} name="reference" defaultValue={opportunity.reference} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal uppercase" /></label>
           <label className="text-xs font-semibold">Stage<select name="stage" defaultValue={opportunity.stage} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{opportunityStages.map((stage) => <option key={stage} value={stage}>{titleCase(stage)}</option>)}</select></label>
           <label className="text-xs font-semibold">Owner<select name="owner_id" defaultValue={opportunity.owner_id ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Unassigned</option>{profilesResult.data?.map((profile) => <option key={profile.id} value={profile.id}>{profile.full_name || "Unnamed user"}</option>)}</select></label>
-          <label className="text-xs font-semibold">Customer <span className="font-normal text-[var(--muted)]">(optional at intake)</span><select name="customer_id" defaultValue={opportunity.customer_id ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Assign later</option>{customersResult.data?.map((item) => <option key={item.id} value={item.id}>{item.display_name || item.name}</option>)}</select></label>
-          <label className="text-xs font-semibold">Site <span className="font-normal text-[var(--muted)]">(optional at intake)</span><select name="site_id" defaultValue={opportunity.site_id ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Assign later</option>{sitesResult.data?.map((item) => <option key={item.id} value={item.id}>{item.name}{item.postcode ? ` · ${item.postcode}` : ""}</option>)}</select></label>
           <label className="text-xs font-semibold">Lead source<input name="lead_source" defaultValue={opportunity.lead_source ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
           <label className="text-xs font-semibold">Estimated PV (kWp)<input name="estimated_pv_kwp" type="number" min="0" step="0.01" defaultValue={opportunity.estimated_pv_kwp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
           <label className="text-xs font-semibold">Estimated battery (kWh)<input name="estimated_battery_kwh" type="number" min="0" step="0.01" defaultValue={opportunity.estimated_battery_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
