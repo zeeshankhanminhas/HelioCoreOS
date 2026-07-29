@@ -58,6 +58,16 @@ Lead
 
 Customer and Site are optional during initial Lead capture. Their absence is visible and must be resolved before a governed proposal is issued.
 
+## UI implementation standard
+
+This workflow follows [UI Component Strategy](../UI-COMPONENT-STRATEGY.md).
+
+- Opportunity registers and record workspaces remain custom HelioCoreOS compositions.
+- shadcn/ui may support accessible comboboxes, menus, dialogs, confirmations, tooltips, skeletons and notifications.
+- TanStack Table may be introduced when register scale, sorting or column behaviour justifies it.
+- Search, filtering, progressive intake, missing-relationship warnings and lifecycle state must remain visible and must not be hidden inside generic component defaults.
+- Existing stable forms should be migrated only when accessibility, reuse or maintenance benefits are demonstrated.
+
 ## Acceptance criteria
 
 1. An Opportunity can be created without a Customer or Site.
@@ -70,6 +80,7 @@ Customer and Site are optional during initial Lead capture. Their absence is vis
 8. Core Opportunity updates are auditable.
 9. Missing Customer or Site assignment remains visible.
 10. No workflow failure is silently presented as success.
+11. Adopted interaction primitives are keyboard accessible and preserve explicit loading, empty, error and disabled states.
 
 ## Validation required before merge
 
@@ -82,4 +93,5 @@ Customer and Site are optional during initial Lead capture. Their absence is vis
 - reject duplicate reference
 - update stage and verify activity event
 - verify search, stage filter, empty and error states
+- verify keyboard operation and focus visibility
 - verify desktop and mobile layouts
