@@ -1,9 +1,10 @@
 # HelioCoreOS launch scope
 
 > Governing reference: [HelioCoreOS Constitution](./CONSTITUTION.md)  
+> UI reference: [UI Component Strategy](./UI-COMPONENT-STRATEGY.md)  
 > Project profile: HelioCoreOS Solar EPC  
 > Change classification: Project Extension  
-> Core references: CORE-CTX-001, CORE-NAV-001, CORE-DATA-001, CORE-STATE-001, CORE-DOC-001, CORE-APP-001, CORE-AUDIT-001, CORE-FAIL-001
+> Core references: CORE-CTX-001, CORE-NAV-001, CORE-DATA-001, CORE-STATE-001, CORE-DOC-001, CORE-APP-001, CORE-AUDIT-001, CORE-FAIL-001, CORE-UX-001
 
 ## Product promise
 
@@ -50,10 +51,11 @@ It includes:
 5. Customer register and optional Opportunity assignment;
 6. Site register and optional Opportunity assignment;
 7. Customer Readiness and evidence tracking;
-8. Indicative Proposal creation and management;
+8. Indicative Proposal creation and governed lifecycle management;
 9. activity history and audit visibility;
 10. consistent breadcrumbs, parent paths and contextual actions;
-11. foundational document metadata, states and approval references required by implemented workflows.
+11. foundational document metadata, states and approval references required by implemented workflows;
+12. selective use of accessible UI primitives without surrendering the HelioCoreOS visual or operating hierarchy.
 
 An Opportunity must be creatable without a Customer or Site. Only the minimum information required for commercial capture should be mandatory at intake.
 
@@ -99,6 +101,24 @@ The launch platform supports:
 
 The launch does not include custom roles, granular permission builders, automated payment collection, multi-office hierarchy, SSO or white labelling.
 
+## UI implementation boundary
+
+Tailwind CSS is the launch styling foundation. shadcn/ui may be introduced selectively for interaction primitives such as dialogs, drawers, menus, popovers, comboboxes, date controls, tabs, notifications, skeletons and progress indicators.
+
+The workspace shell, navigation, breadcrumbs, record hierarchy, lifecycle controls, operational summaries, workflow gates, audit surfaces and Solar EPC workspaces remain custom HelioCoreOS components.
+
+Launch UI work must preserve:
+
+- Apple-like simplicity;
+- The Ordinary-like clarity;
+- enterprise governance;
+- Solar EPC and industrial precision;
+- accessible keyboard and screen-reader behaviour;
+- explicit loading, empty, error, disabled and destructive states;
+- restrained decoration with no generic SaaS visual language.
+
+Introducing shadcn/ui does not authorise a wholesale redesign or unnecessary replacement of stable custom components.
+
 ## Future project additions
 
 The following remain outside Launch V1 until the core commercial workflow is proven with real users:
@@ -143,7 +163,8 @@ A release is launch-ready only when a new organisation can:
 11. see clear object and document states;
 12. see approval requirements where applicable;
 13. recover visibly from failed or partially completed actions;
-14. review the resulting activity and audit history.
+14. review the resulting activity and audit history;
+15. operate all interactive components by keyboard with clear focus and state feedback.
 
 ## Diagnostic and build gate
 
@@ -159,6 +180,8 @@ Before a launch capability is considered complete, it must pass:
 - document and approval behaviour where applicable;
 - partial-failure and recovery review;
 - activity and audit review;
+- accessibility and keyboard review for adopted UI primitives;
+- desktop and mobile visual consistency review;
 - `npm run lint`;
 - `npm run typecheck`;
 - `npm run build`;
@@ -167,5 +190,7 @@ Before a launch capability is considered complete, it must pass:
 ## Complexity rule
 
 No deferred module enters the launch scope unless the current end-to-end commercial workflow cannot be completed correctly without it.
+
+No dependency or UI component enters the launch branch without a demonstrated workflow, accessibility, consistency or maintenance benefit.
 
 No Project Addition may alter or bypass a constitutional core rule. Any change to a core rule requires a formal constitutional amendment before implementation.
