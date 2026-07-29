@@ -22,8 +22,10 @@ async function context() {
 
 export async function createOpportunity(fd: FormData) {
   const { supabase, user, organisationId } = await context();
-  const title = text(fd,"title"), reference = text(fd,"reference"), customerId = text(fd,"customer_id"), siteId = text(fd,"site_id");
-  if (!title || !reference || !customerId || !siteId) redirect("/dashboard/opportunities/new?error=Complete%20the%20required%20fields");
+  const title = text(fd,"title"), reference = text(fd,"reference");
+  const customerId = text(fd,"customer_id") || null;
+  const siteId = text(fd,"site_id") || null;
+  if (!title || !reference) redirect("/dashboard/opportunities/new?error=Opportunity%20title%20and%20reference%20are%20required");
   const { data, error } = await supabase.from("opportunities").insert({
     organisation_id: organisationId, customer_id: customerId, site_id: siteId, owner_id: text(fd,"owner_id") || null,
     title, reference: reference.toUpperCase(), stage: "lead", lead_source: text(fd,"lead_source") || null,
