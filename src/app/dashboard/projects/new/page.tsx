@@ -9,10 +9,10 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-type SearchParams = Promise<{ error?: string }>;
+type SearchParams = Promise<{ error?: string; customer?: string; site?: string; created?: string }>;
 
 export default async function NewProjectPage({ searchParams }: { searchParams: SearchParams }) {
-  const { error } = await searchParams;
+  const params = await searchParams;
   const supabase = await createClient();
   const [{ data: customers }, { data: sites }, { data: profiles }] = await Promise.all([
     supabase.from("customers").select("id, name").order("name"),
@@ -21,6 +21,8 @@ export default async function NewProjectPage({ searchParams }: { searchParams: S
   ]);
 
   const ready = Boolean(customers?.length && sites?.length);
+  const selectedCustomer = customers?.some((item) => item.id === params.customer) ? params.customer : "";
+  const selectedSite = sites?.some((item) => item.id === params.site && (!selectedCustomer || item.customer_id === selectedCustomer)) ? params.site : "";
 
   return (
     <div className="mx-auto max-w-[1100px]">
@@ -33,7 +35,8 @@ export default async function NewProjectPage({ searchParams }: { searchParams: S
         <Link href="/dashboard/projects" className="w-fit border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Return to register</Link>
       </header>
 
-      {error ? <div className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
+      {params.created === "site" ? <div className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Site created. Customer and site context have been carried into this project.</div> : null}
+      {params.error ? <div className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{params.error}</div> : null}
 
       {!ready ? (
         <section className="mt-7 border border-[var(--line)] p-7">
@@ -54,8 +57,8 @@ export default async function NewProjectPage({ searchParams }: { searchParams: S
             <div className="grid gap-5 p-5 md:grid-cols-2 md:p-6">
               <label className="text-xs font-semibold">Project name<input required name="name" className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal outline-none focus:border-[var(--foreground)]" /></label>
               <label className="text-xs font-semibold">Project reference<input required name="reference" placeholder="HC-2026-001" className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal uppercase outline-none focus:border-[var(--foreground)]" /></label>
-              <label className="text-xs font-semibold">Customer<select required name="customer_id" className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Select customer</option>{customers!.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-              <label className="text-xs font-semibold">Site<select required name="site_id" className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Select site</option>{sites!.map((item) => <option key={item.id} value={item.id}>{item.name}{item.postcode ? ` · ${item.postcode}` : ""}</option>)}</select></label>
+              <label className="text-xs font-semibold">Customer<select required name="customer_id" defaultValue={selectedCustomer} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Select customer</option>{customers!.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+              <label className="text-xs font-semibold">Site<select required name="site_id" defaultValue={selectedSite} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Select site</option>{sites!.map((item) => <option key={item.id} value={item.id}>{item.name}{item.postcode ? ` · ${item.postcode}` : ""}</option>)}</select></label>
               <label className="text-xs font-semibold">Project type<input name="project_type" placeholder="Rooftop PV, ground mount, PV + BESS" className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal outline-none focus:border-[var(--foreground)]" /></label>
               <label className="text-xs font-semibold">Project owner<select name="project_owner_id" className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Unassigned</option>{(profiles ?? []).map((item) => <option key={item.id} value={item.id}>{item.full_name || "Unnamed profile"} · {titleCase(item.role)}</option>)}</select></label>
             </div>
