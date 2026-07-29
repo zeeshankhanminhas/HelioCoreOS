@@ -36,6 +36,7 @@ const navigation = [
     items: [
       { href: "/dashboard/documents", label: "Documents", mark: "12" },
       { href: "/dashboard/reports", label: "Reports", mark: "13" },
+      { href: "/dashboard/team", label: "Team & access", mark: "14" },
     ],
   },
 ];
