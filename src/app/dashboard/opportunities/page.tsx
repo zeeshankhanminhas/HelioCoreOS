@@ -14,7 +14,7 @@ export default async function OpportunitiesPage() {
     </header>
     <section className="mt-7 border border-[var(--line)]">
       <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Active register</p><h2 className="mt-2 text-2xl font-medium">{opportunities?.length ?? 0} opportunities</h2></div>
-      {opportunities?.length ? <div className="divide-y divide-[var(--line)]">{opportunities.map((item: any) => <Link key={item.id} href={`/dashboard/opportunities/${item.id}`} className="grid gap-3 p-5 hover:bg-black/[0.02] md:grid-cols-[1.4fr_1fr_130px_140px] md:items-center">
+      {opportunities?.length ? <div className="divide-y divide-[var(--line)]">{opportunities.map(item => <Link key={item.id} href={`/dashboard/opportunities/${item.id}`} className="grid gap-3 p-5 hover:bg-black/[0.02] md:grid-cols-[1.4fr_1fr_130px_140px] md:items-center">
         <div><p className="text-sm font-semibold">{item.title}</p><p className="mt-1 text-xs text-[var(--muted)]">{item.reference} · {item.customers?.name ?? "Customer"} · {item.sites?.name ?? "Site"}</p></div>
         <p className="text-xs text-[var(--muted)]">Owner: {item.profiles?.full_name ?? "Unassigned"}</p><span className="text-xs font-medium">{titleCase(item.stage)}</span><p className="text-sm font-semibold md:text-right">{money.format(Number(item.estimated_value_gbp ?? 0))}</p>
       </Link>)}</div> : <div className="p-12 text-center"><p className="text-sm font-semibold">No opportunities yet</p><p className="mt-2 text-sm text-[var(--muted)]">Create the first commercial opportunity to begin the launch workflow.</p></div>}
