@@ -1,19 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateOpportunity, updateReadiness } from "../actions";
+import { updateOpportunity } from "../actions";
 import { ProposalGovernance } from "./proposal-governance";
+import { ReadinessGovernance } from "./readiness-governance";
 import { RelationshipAssignment } from "./relationship-assignment";
 
-const labels: Record<string, string> = {
-  electricity_bill: "Electricity bill",
-  customer_id: "Customer ID",
-  proof_of_address: "Proof of address",
-  ownership_evidence: "Ownership evidence",
-  meter_photo: "Meter photo",
-  survey_authorisation: "Survey authorisation",
-};
-const readinessStatuses = ["requested", "uploaded", "accepted", "rejected", "waived"];
 const opportunityStages = ["lead", "qualified", "readiness", "proposal", "won", "lost"];
 
 function titleCase(value: string) {
@@ -34,7 +26,7 @@ export default async function OpportunityPage({ params, searchParams }: { params
 
   const [opportunityResult, readinessResult, proposalResult, customersResult, sitesResult, profilesResult] = await Promise.all([
     supabase.from("opportunities").select("id,title,reference,stage,lead_source,customer_id,site_id,owner_id,estimated_pv_kwp,estimated_battery_kwh,estimated_value_gbp,notes,customers(name,display_name),sites(name,postcode),profiles(full_name)").eq("id", id).single(),
-    supabase.from("opportunity_readiness_items").select("id,item_type,status,evidence_url,review_note,updated_at").eq("opportunity_id", id).order("item_type"),
+    supabase.from("opportunity_readiness_items").select("id,item_type,status,evidence_url,review_note,decision_note,is_required,reviewed_by,reviewed_at,updated_at").eq("opportunity_id", id).order("item_type"),
     supabase.from("indicative_proposals").select("*").eq("opportunity_id", id).maybeSingle(),
     supabase.from("customers").select("id,name,display_name").order("name"),
     supabase.from("sites").select("id,customer_id,name,postcode").order("name"),
@@ -43,14 +35,15 @@ export default async function OpportunityPage({ params, searchParams }: { params
 
   if (!opportunityResult.data) notFound();
   const opportunity = opportunityResult.data;
-  const readiness = readinessResult.data;
+  const readiness = readinessResult.data ?? [];
   const proposal = proposalResult.data;
   const customer = firstRelation(opportunity.customers);
   const site = firstRelation(opportunity.sites);
   const owner = firstRelation(opportunity.profiles);
-  const accepted = readiness?.filter((item) => item.status === "accepted" || item.status === "waived").length ?? 0;
-  const total = readiness?.length ?? 0;
-  const readinessScore = total ? Math.round((accepted / total) * 100) : 0;
+  const requiredReadiness = readiness.filter((item) => item.is_required);
+  const acceptedRequired = requiredReadiness.filter((item) => item.status === "accepted" || item.status === "waived").length;
+  const readinessScore = requiredReadiness.length ? Math.round((acceptedRequired / requiredReadiness.length) * 100) : 100;
+  const reviewerNames = Object.fromEntries((profilesResult.data ?? []).map((profile) => [profile.id, profile.full_name || "Unnamed user"]));
   const money = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
   const loadFailure = readinessResult.error || proposalResult.error || customersResult.error || sitesResult.error || profilesResult.error;
 
@@ -73,7 +66,7 @@ export default async function OpportunityPage({ params, searchParams }: { params
 
       <section className="mt-7 grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4">
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Stage</p><p className="mt-2 text-2xl font-medium">{titleCase(opportunity.stage)}</p></div>
-        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Readiness</p><p className="mt-2 text-2xl font-medium">{readinessScore}%</p></div>
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Required readiness</p><p className="mt-2 text-2xl font-medium">{readinessScore}%</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Estimated value</p><p className="mt-2 text-2xl font-medium">{opportunity.estimated_value_gbp == null ? "Not estimated" : money.format(Number(opportunity.estimated_value_gbp))}</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Owner</p><p className="mt-2 text-sm font-semibold">{owner?.full_name ?? "Unassigned"}</p></div>
       </section>
@@ -102,18 +95,15 @@ export default async function OpportunityPage({ params, searchParams }: { params
         </form>
       </section>
 
-      <section className="mt-7 border border-[var(--line)]">
-        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Customer readiness</p><h2 className="mt-2 text-2xl font-medium">Evidence checklist</h2><p className="mt-2 text-sm text-[var(--muted)]">{accepted} of {total} items accepted or waived.</p></div>
-        <div className="divide-y divide-[var(--line)]">{readiness?.map((item) => <form key={item.id} action={updateReadiness} className="grid gap-4 p-5 lg:grid-cols-[220px_160px_1fr_1fr_auto] lg:items-end"><input type="hidden" name="opportunity_id" value={id} /><input type="hidden" name="item_type" value={item.item_type} /><div><p className="text-sm font-semibold">{labels[item.item_type] ?? titleCase(item.item_type)}</p><p className="mt-1 text-xs text-[var(--muted)]">Current: {titleCase(item.status)}</p></div><label className="text-xs font-semibold">Status<select name="status" defaultValue={item.status} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{readinessStatuses.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label><label className="text-xs font-semibold">Evidence link<input name="evidence_url" defaultValue={item.evidence_url ?? ""} placeholder="Drive or storage URL" className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><label className="text-xs font-semibold">Review note<input name="review_note" defaultValue={item.review_note ?? ""} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label><button className="min-h-10 border border-[var(--line)] px-4 text-xs font-semibold">Save</button></form>)}</div>
-      </section>
+      <ReadinessGovernance opportunityId={id} items={readiness} reviewerNames={reviewerNames} />
 
       <ProposalGovernance
         opportunityId={id}
         opportunityReference={opportunity.reference}
         customerAssigned={Boolean(opportunity.customer_id)}
         siteAssigned={Boolean(opportunity.site_id)}
-        readinessTotal={total}
-        readinessComplete={accepted}
+        readinessTotal={requiredReadiness.length}
+        readinessComplete={acceptedRequired}
         proposal={proposal}
         estimatedPv={opportunity.estimated_pv_kwp}
         estimatedBattery={opportunity.estimated_battery_kwh}
