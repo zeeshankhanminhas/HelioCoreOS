@@ -48,6 +48,9 @@ type WorkspaceShellProps = {
   signOutAction: () => Promise<void>;
 };
 
+const interactiveFocus =
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--background)]";
+
 function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
 
@@ -67,14 +70,19 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
-                  className={`group flex items-center justify-between px-3 py-2.5 text-sm transition ${
+                  aria-current={active ? "page" : undefined}
+                  className={`group flex items-center justify-between border-l-2 px-3 py-2.5 text-sm transition-colors ${interactiveFocus} ${
                     active
-                      ? "bg-[var(--foreground)] text-[var(--background)]"
-                      : "text-[var(--muted)] hover:bg-white/50 hover:text-[var(--foreground)]"
+                      ? "border-[var(--accent)] bg-white/55 font-medium text-[var(--foreground)]"
+                      : "border-transparent text-[var(--muted)] hover:bg-white/40 hover:text-[var(--foreground)]"
                   }`}
                 >
                   <span>{item.label}</span>
-                  <span className={`text-[10px] tabular-nums ${active ? "opacity-60" : "opacity-35 group-hover:opacity-60"}`}>
+                  <span
+                    className={`text-[10px] tabular-nums ${
+                      active ? "text-[var(--accent)] opacity-100" : "opacity-35 group-hover:opacity-60"
+                    }`}
+                  >
                     {item.mark}
                   </span>
                 </Link>
@@ -100,7 +108,7 @@ export function WorkspaceShell({
     <div className="min-h-screen bg-[var(--background)] lg:grid lg:grid-cols-[280px_minmax(0,1fr)]">
       <aside className="hidden border-r border-[var(--line)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         <div className="border-b border-[var(--line)] px-7 py-7">
-          <Link href="/dashboard" className="block text-xl font-semibold tracking-[-0.03em]">
+          <Link href="/dashboard" className={`block text-xl font-semibold tracking-[-0.03em] ${interactiveFocus}`}>
             HelioCoreOS
           </Link>
           <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">
@@ -118,7 +126,10 @@ export function WorkspaceShell({
           <div className="mt-4 flex items-center justify-between">
             <span className="text-[10px] uppercase tracking-[0.18em] text-[var(--muted)]">{userRole}</span>
             <form action={signOutAction}>
-              <button type="submit" className="text-xs font-medium text-[var(--muted)] hover:text-[var(--foreground)]">
+              <button
+                type="submit"
+                className={`text-xs font-medium text-[var(--muted)] transition-colors hover:text-[var(--foreground)] ${interactiveFocus}`}
+              >
                 Sign out
               </button>
             </form>
@@ -139,7 +150,11 @@ export function WorkspaceShell({
                 <p className="text-xl font-semibold tracking-[-0.03em]">HelioCoreOS</p>
                 <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--accent)]">EPC command</p>
               </div>
-              <button onClick={() => setMobileOpen(false)} className="px-2 py-1 text-sm text-[var(--muted)]" aria-label="Close navigation">
+              <button
+                onClick={() => setMobileOpen(false)}
+                className={`px-2 py-1 text-sm text-[var(--muted)] ${interactiveFocus}`}
+                aria-label="Close navigation"
+              >
                 Close
               </button>
             </div>
@@ -150,7 +165,9 @@ export function WorkspaceShell({
               <p className="truncate text-sm font-semibold">{userName}</p>
               <p className="mt-1 truncate text-xs text-[var(--muted)]">{organisationName}</p>
               <form action={signOutAction} className="mt-4">
-                <button type="submit" className="text-xs font-medium text-[var(--muted)]">Sign out</button>
+                <button type="submit" className={`text-xs font-medium text-[var(--muted)] ${interactiveFocus}`}>
+                  Sign out
+                </button>
               </form>
             </div>
           </aside>
@@ -162,7 +179,7 @@ export function WorkspaceShell({
           <div className="flex min-w-0 items-center gap-4">
             <button
               onClick={() => setMobileOpen(true)}
-              className="border border-[var(--line)] px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] lg:hidden"
+              className={`border border-[var(--line)] bg-transparent px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors hover:bg-white/40 lg:hidden ${interactiveFocus}`}
               aria-label="Open navigation"
             >
               Menu
@@ -173,7 +190,10 @@ export function WorkspaceShell({
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <Link href="/dashboard/projects" className="hidden border border-[var(--line)] px-3 py-2 text-xs font-medium sm:block">
+            <Link
+              href="/dashboard/projects"
+              className={`hidden border border-[var(--line)] px-3 py-2 text-xs font-medium transition-colors hover:bg-white/40 sm:block ${interactiveFocus}`}
+            >
               View projects
             </Link>
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--foreground)] text-xs font-semibold text-[var(--background)]">
