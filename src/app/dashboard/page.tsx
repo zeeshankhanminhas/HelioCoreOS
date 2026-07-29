@@ -133,11 +133,17 @@ export default async function DashboardPage() {
             One governed view across commercial commitments, engineering flow, delivery risk and completion evidence.
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/dashboard/tasks" className="border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row md:justify-end">
+          <Link
+            href="/dashboard/tasks"
+            className="inline-flex min-h-10 items-center justify-center border border-[var(--line)] px-4 py-2.5 text-xs font-semibold hover:border-[var(--foreground)]"
+          >
             Review actions
           </Link>
-          <Link href="/dashboard/projects" className="bg-[var(--foreground)] px-4 py-2.5 text-xs font-semibold text-[var(--background)]">
+          <Link
+            href="/dashboard/projects"
+            className="inline-flex min-h-10 items-center justify-center border border-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white"
+          >
             Open portfolio
           </Link>
         </div>
@@ -265,26 +271,19 @@ export default async function DashboardPage() {
           </div>
 
           {activities.length ? (
-            <ol className="divide-y divide-[var(--line)]">
+            <div className="divide-y divide-[var(--line)]">
               {activities.map((activity) => (
-                <li key={activity.id} className="p-5 md:px-6">
-                  <div className="flex items-start gap-3">
-                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-[var(--accent)]" />
-                    <div>
-                      <p className="text-sm leading-6">{activity.description}</p>
-                      <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[var(--muted)]">
-                        {titleCase(activity.event_type)} · {dateFormatter.format(new Date(activity.created_at))}
-                      </p>
-                    </div>
+                <div key={activity.id} className="p-5 md:px-6">
+                  <div className="flex items-start justify-between gap-4">
+                    <p className="text-sm font-semibold">{titleCase(activity.event_type)}</p>
+                    <span className="shrink-0 text-[10px] tabular-nums text-[var(--muted)]">{dateFormatter.format(new Date(activity.created_at))}</span>
                   </div>
-                </li>
+                  <p className="mt-2 text-xs leading-5 text-[var(--muted)]">{activity.description}</p>
+                </div>
               ))}
-            </ol>
-          ) : (
-            <div className="px-6 py-12 text-center">
-              <p className="text-sm font-semibold">No recorded events yet</p>
-              <p className="mt-2 text-xs leading-5 text-[var(--muted)]">Governed changes will build the operational evidence trail here.</p>
             </div>
+          ) : (
+            <div className="px-6 py-12 text-center text-sm text-[var(--muted)]">Governed workspace activity will appear here.</div>
           )}
         </article>
       </section>
