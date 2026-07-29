@@ -1,53 +1,130 @@
 # HelioCoreOS launch scope
 
+> Governing reference: [HelioCoreOS Constitution](./CONSTITUTION.md)  
+> Project profile: HelioCoreOS Solar EPC  
+> Change classification: Project Extension  
+> Core references: CORE-CTX-001, CORE-NAV-001, CORE-DATA-001, CORE-STATE-001, CORE-DOC-001, CORE-APP-001, CORE-AUDIT-001, CORE-FAIL-001
+
 ## Product promise
 
-HelioCoreOS launches as the smallest complete, governed front end of a Solar EPC workflow. It must allow a subscribed organisation to control who has access and move a prospective customer from first record to a survey-ready project without introducing enterprise complexity prematurely.
+HelioCoreOS launches as the smallest complete and governed commercial foundation for a Solar EPC workflow. It must allow a subscribed organisation to control access, capture and qualify demand, assign customer and site context progressively, assess readiness, and prepare an indicative proposal without introducing later delivery complexity prematurely.
 
-## Launch workflow
+The launch scope extends the Constitution. It does not redefine the protected core.
 
-Organisation → User → Customer → Site → Opportunity → Customer Readiness → Indicative Proposal → Survey → Project
+## Reference lifecycle
+
+The complete Solar EPC lifecycle is:
+
+```text
+Enquiry / Lead
+→ Opportunity
+→ Customer assignment
+→ Site assignment
+→ Customer Readiness
+→ Indicative Proposal
+→ Detailed Quote
+→ Contract
+→ Project Creation
+→ Engineering
+→ Procurement
+→ Installation
+→ Testing and Commissioning
+→ Handover
+→ Operations and Maintenance
+```
+
+Customer and Site are flexible relationships. They may be assigned after an Opportunity is created, but later workflow gates may require them before progression.
+
+![HelioCoreOS operating system blueprint](./assets/heliocoreos-os-blueprint-v1.svg)
+
+## Launch V1 boundary
+
+Launch V1 is the commercial foundation only.
+
+It includes:
+
+1. organisation authentication and tenant isolation;
+2. four fixed roles: Owner, Admin, Manager and Member;
+3. simple teams and access visibility;
+4. Opportunity creation and register;
+5. Customer register and optional Opportunity assignment;
+6. Site register and optional Opportunity assignment;
+7. Customer Readiness and evidence tracking;
+8. Indicative Proposal creation and management;
+9. activity history and audit visibility;
+10. consistent breadcrumbs, parent paths and contextual actions;
+11. foundational document metadata, states and approval references required by implemented workflows.
+
+An Opportunity must be creatable without a Customer or Site. Only the minimum information required for commercial capture should be mandatory at intake.
+
+## Launch navigation
+
+Only operational destinations should appear as normal live navigation.
+
+```text
+Command
+- Overview
+- Tasks
+
+Sales
+- Opportunities
+- Customers
+- Sites
+
+Delivery
+- Projects
+
+Administration
+- Team & Access
+- Settings
+```
+
+A future or incomplete destination must be hidden or clearly marked as planned. It must not appear to be a working operational module.
 
 ## Platform foundation
 
 The launch platform supports:
 
 - one organisation boundary per workspace;
-- four fixed roles: Owner, Admin, Manager, Member;
+- Supabase Row Level Security for tenant isolation;
+- four fixed roles;
 - simple teams;
-- active, invited, and suspended user states;
-- manually governed subscription plan, status, currency, and user limit;
-- Supabase Row Level Security for tenant isolation.
+- active, invited and suspended user states;
+- manually governed subscription plan, status, currency and user limit;
+- universal page context and navigation rules;
+- universal state references;
+- governed document and approval foundations;
+- activity and audit history;
+- explicit error handling and partial-failure detection.
 
-The launch does not include custom roles, granular permission builders, automatic payment collection, multi-office hierarchy, SSO, or white labelling.
+The launch does not include custom roles, granular permission builders, automated payment collection, multi-office hierarchy, SSO or white labelling.
 
-## Business capabilities
+## Future project additions
 
-The first release is limited to:
+The following remain outside Launch V1 until the core commercial workflow is proven with real users:
 
-1. Customers
-2. Sites
-3. Opportunities
-4. Customer Readiness and Evidence
-5. Indicative Proposals
-6. Surveys
-7. Project conversion
-8. Team and access visibility
-
-## Deferred capabilities
-
-The following remain outside launch until the core workflow is proven with real users:
-
-- full BOM and design calculation engines;
+- detailed technical and commercial quote;
+- contract execution;
+- automatic Opportunity-to-Project conversion;
+- full survey workflow;
+- engineering calculation engines;
+- approved BOM;
+- supplier pricing;
 - procurement and inventory;
 - vendor and subcontractor portals;
 - civil and roof-access work packages;
-- advanced approvals;
-- net-metering automation;
-- installation and commissioning control;
+- installation management;
+- quality management;
+- testing and commissioning;
+- handover packs;
 - O&M and asset management;
+- net-metering automation;
+- customer and supplier portals;
 - public APIs and bespoke integrations;
+- advanced reporting and analytics;
 - automated recurring billing.
+
+These are separate Project Additions. Each must reference the Core Constitution and define its own lifecycle, states, documents, approvals, permissions, audit behaviour and failure handling.
 
 ## Launch readiness test
 
@@ -55,15 +132,40 @@ A release is launch-ready only when a new organisation can:
 
 1. authenticate and see only its own records;
 2. see its subscription and available seats;
-3. see its users, roles, statuses, and teams;
-4. create a customer and site;
-5. create and qualify an opportunity;
-6. request and validate the minimum customer evidence;
-7. issue an indicative proposal;
-8. complete a structured survey;
-9. convert the opportunity to a project;
-10. review the resulting activity history.
+3. see its users, roles, statuses and teams;
+4. understand its current location on every operational page;
+5. navigate back to the correct parent context;
+6. create an Opportunity without first creating a Customer or Site;
+7. assign or create a Customer later;
+8. assign or create a Site later;
+9. request and validate the minimum Customer Readiness evidence;
+10. create and manage an Indicative Proposal;
+11. see clear object and document states;
+12. see approval requirements where applicable;
+13. recover visibly from failed or partially completed actions;
+14. review the resulting activity and audit history.
+
+## Diagnostic and build gate
+
+Before a launch capability is considered complete, it must pass:
+
+- route inventory;
+- breadcrumb and back-path review;
+- contextual action review;
+- role and tenant isolation review;
+- required versus optional field review;
+- empty, loading, error and not-found states;
+- state-transition validation;
+- document and approval behaviour where applicable;
+- partial-failure and recovery review;
+- activity and audit review;
+- `npm run lint`;
+- `npm run typecheck`;
+- `npm run build`;
+- end-to-end workflow testing.
 
 ## Complexity rule
 
-No deferred module enters the launch branch unless the current end-to-end workflow cannot be completed correctly without it.
+No deferred module enters the launch scope unless the current end-to-end commercial workflow cannot be completed correctly without it.
+
+No Project Addition may alter or bypass a constitutional core rule. Any change to a core rule requires a formal constitutional amendment before implementation.
