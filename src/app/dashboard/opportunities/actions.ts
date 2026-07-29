@@ -9,6 +9,27 @@ const readinessStatuses = ["requested", "uploaded", "accepted", "rejected", "wai
 const proposalStatuses = ["draft", "issued", "accepted", "declined", "expired"] as const;
 const opportunityStages = ["lead", "qualified", "readiness", "proposal", "won", "lost"] as const;
 
+type OpportunityInput = {
+  title: string;
+  reference: string;
+  customerId: string | null;
+  siteId: string | null;
+  ownerId: string | null;
+  leadSource: string | null;
+  estimatedPv: number | null;
+  estimatedBattery: number | null;
+  estimatedValue: number | null;
+  notes: string | null;
+};
+
+type OpportunityPayloadResult =
+  | { ok: true; value: OpportunityInput }
+  | { ok: false; error: string };
+
+type RelationshipResult =
+  | { ok: true; customerId: string | null }
+  | { ok: false; error: string };
+
 function text(fd: FormData, key: string) {
   return String(fd.get(key) ?? "").trim();
 }
@@ -47,7 +68,7 @@ async function validateRelationships(
   customerId: string | null,
   siteId: string | null,
   ownerId: string | null,
-) {
+): Promise<RelationshipResult> {
   let resolvedCustomerId = customerId;
 
   if (customerId) {
@@ -57,7 +78,7 @@ async function validateRelationships(
       .eq("id", customerId)
       .eq("organisation_id", organisationId)
       .maybeSingle();
-    if (!data) return { error: "The selected customer is unavailable in this organisation." };
+    if (!data) return { ok: false, error: "The selected customer is unavailable in this organisation." };
   }
 
   if (siteId) {
@@ -67,9 +88,9 @@ async function validateRelationships(
       .eq("id", siteId)
       .eq("organisation_id", organisationId)
       .maybeSingle();
-    if (!data) return { error: "The selected site is unavailable in this organisation." };
+    if (!data) return { ok: false, error: "The selected site is unavailable in this organisation." };
     if (customerId && data.customer_id && data.customer_id !== customerId) {
-      return { error: "The selected site belongs to a different customer." };
+      return { ok: false, error: "The selected site belongs to a different customer." };
     }
     resolvedCustomerId = resolvedCustomerId ?? data.customer_id ?? null;
   }
@@ -82,49 +103,53 @@ async function validateRelationships(
       .eq("organisation_id", organisationId)
       .eq("status", "active")
       .maybeSingle();
-    if (!data) return { error: "The selected owner is not an active member of this organisation." };
+    if (!data) return { ok: false, error: "The selected owner is not an active member of this organisation." };
   }
 
-  return { customerId: resolvedCustomerId };
+  return { ok: true, customerId: resolvedCustomerId };
 }
 
-function opportunityPayload(fd: FormData) {
+function opportunityPayload(fd: FormData): OpportunityPayloadResult {
   const title = text(fd, "title");
   const reference = text(fd, "reference").toUpperCase();
   const estimatedPv = numberOrNull(fd, "estimated_pv_kwp");
   const estimatedBattery = numberOrNull(fd, "estimated_battery_kwh");
   const estimatedValue = numberOrNull(fd, "estimated_value_gbp");
 
-  if (!title || !reference) return { error: "Opportunity title and reference are required." };
-  if (title.length > 160) return { error: "Opportunity title must be 160 characters or fewer." };
+  if (!title || !reference) return { ok: false, error: "Opportunity title and reference are required." };
+  if (title.length > 160) return { ok: false, error: "Opportunity title must be 160 characters or fewer." };
   if (!/^[A-Z0-9][A-Z0-9._/-]{2,39}$/.test(reference)) {
-    return { error: "Reference must be 3–40 characters using letters, numbers, dots, slashes, underscores or hyphens." };
+    return { ok: false, error: "Reference must be 3–40 characters using letters, numbers, dots, slashes, underscores or hyphens." };
   }
   if ([estimatedPv, estimatedBattery, estimatedValue].some((value) => Number.isNaN(value))) {
-    return { error: "Estimated capacities and value must be valid non-negative numbers." };
+    return { ok: false, error: "Estimated capacities and value must be valid non-negative numbers." };
   }
 
   return {
-    title,
-    reference,
-    customerId: text(fd, "customer_id") || null,
-    siteId: text(fd, "site_id") || null,
-    ownerId: text(fd, "owner_id") || null,
-    leadSource: text(fd, "lead_source") || null,
-    estimatedPv,
-    estimatedBattery,
-    estimatedValue,
-    notes: text(fd, "notes") || null,
+    ok: true,
+    value: {
+      title,
+      reference,
+      customerId: text(fd, "customer_id") || null,
+      siteId: text(fd, "site_id") || null,
+      ownerId: text(fd, "owner_id") || null,
+      leadSource: text(fd, "lead_source") || null,
+      estimatedPv,
+      estimatedBattery,
+      estimatedValue,
+      notes: text(fd, "notes") || null,
+    },
   };
 }
 
 export async function createOpportunity(fd: FormData) {
   const { supabase, user, organisationId } = await context();
-  const input = opportunityPayload(fd);
-  if ("error" in input) fail("/dashboard/opportunities/new", input.error);
+  const parsed = opportunityPayload(fd);
+  if (!parsed.ok) fail("/dashboard/opportunities/new", parsed.error);
+  const input = parsed.value;
 
   const relationship = await validateRelationships(supabase, organisationId, input.customerId, input.siteId, input.ownerId);
-  if (relationship.error) fail("/dashboard/opportunities/new", relationship.error);
+  if (!relationship.ok) fail("/dashboard/opportunities/new", relationship.error);
 
   const { data: duplicate } = await supabase
     .from("opportunities")
@@ -138,7 +163,7 @@ export async function createOpportunity(fd: FormData) {
     .from("opportunities")
     .insert({
       organisation_id: organisationId,
-      customer_id: relationship.customerId ?? null,
+      customer_id: relationship.customerId,
       site_id: input.siteId,
       owner_id: input.ownerId,
       title: input.title,
@@ -185,15 +210,17 @@ export async function updateOpportunity(fd: FormData) {
   const { supabase, user, organisationId } = await context();
   const opportunityId = text(fd, "opportunity_id");
   const path = `/dashboard/opportunities/${opportunityId}`;
-  const input = opportunityPayload(fd);
   if (!opportunityId) fail("/dashboard/opportunities", "Opportunity identifier is missing.");
-  if ("error" in input) fail(path, input.error);
+
+  const parsed = opportunityPayload(fd);
+  if (!parsed.ok) fail(path, parsed.error);
+  const input = parsed.value;
 
   const stage = text(fd, "stage") || "lead";
   if (!opportunityStages.includes(stage as (typeof opportunityStages)[number])) fail(path, "Invalid opportunity stage.");
 
   const relationship = await validateRelationships(supabase, organisationId, input.customerId, input.siteId, input.ownerId);
-  if (relationship.error) fail(path, relationship.error);
+  if (!relationship.ok) fail(path, relationship.error);
 
   const { data: duplicate } = await supabase
     .from("opportunities")
@@ -215,7 +242,7 @@ export async function updateOpportunity(fd: FormData) {
   const { error } = await supabase
     .from("opportunities")
     .update({
-      customer_id: relationship.customerId ?? null,
+      customer_id: relationship.customerId,
       site_id: input.siteId,
       owner_id: input.ownerId,
       title: input.title,
