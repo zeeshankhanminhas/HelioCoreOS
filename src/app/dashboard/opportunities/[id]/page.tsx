@@ -3,36 +3,128 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { saveProposal, updateReadiness } from "../actions";
 
-const labels: Record<string,string> = { electricity_bill:"Electricity bill", customer_id:"Customer ID", proof_of_address:"Proof of address", ownership_evidence:"Ownership evidence", meter_photo:"Meter photo", survey_authorisation:"Survey authorisation" };
-const readinessStatuses = ["requested","uploaded","accepted","rejected","waived"];
-const proposalStatuses = ["draft","issued","accepted","declined","expired"];
-function titleCase(value: string) { return value.replaceAll("_"," ").replace(/\b\w/g,c=>c.toUpperCase()); }
+const labels: Record<string, string> = {
+  electricity_bill: "Electricity bill",
+  customer_id: "Customer ID",
+  proof_of_address: "Proof of address",
+  ownership_evidence: "Ownership evidence",
+  meter_photo: "Meter photo",
+  survey_authorisation: "Survey authorisation",
+};
+const readinessStatuses = ["requested", "uploaded", "accepted", "rejected", "waived"];
+const proposalStatuses = ["draft", "issued", "accepted", "declined", "expired"];
+
+function titleCase(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
+
+function firstRelation<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] ?? null;
+  return value ?? null;
+}
 
 type SearchParams = Promise<{ error?: string; updated?: string }>;
 
-export default async function OpportunityPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SearchParams }) {
-  const { id } = await params; const query = await searchParams; const supabase = await createClient();
+export default async function OpportunityPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: SearchParams;
+}) {
+  const { id } = await params;
+  const query = await searchParams;
+  const supabase = await createClient();
+
   const [{ data: opportunity }, { data: readiness }, { data: proposal }] = await Promise.all([
-    supabase.from("opportunities").select("id,title,reference,stage,lead_source,estimated_pv_kwp,estimated_battery_kwh,estimated_value_gbp,notes,customers(name,display_name),sites(name,postcode),profiles(full_name)").eq("id",id).single(),
-    supabase.from("opportunity_readiness_items").select("id,item_type,status,evidence_url,review_note,updated_at").eq("opportunity_id",id).order("item_type"),
-    supabase.from("indicative_proposals").select("*").eq("opportunity_id",id).maybeSingle(),
+    supabase
+      .from("opportunities")
+      .select(
+        "id,title,reference,stage,lead_source,estimated_pv_kwp,estimated_battery_kwh,estimated_value_gbp,notes,customers(name,display_name),sites(name,postcode),profiles(full_name)",
+      )
+      .eq("id", id)
+      .single(),
+    supabase
+      .from("opportunity_readiness_items")
+      .select("id,item_type,status,evidence_url,review_note,updated_at")
+      .eq("opportunity_id", id)
+      .order("item_type"),
+    supabase.from("indicative_proposals").select("*").eq("opportunity_id", id).maybeSingle(),
   ]);
+
   if (!opportunity) notFound();
-  const accepted = readiness?.filter(item => item.status === "accepted" || item.status === "waived").length ?? 0;
-  const total = readiness?.length ?? 0; const readinessScore = total ? Math.round((accepted / total) * 100) : 0;
-  const money = new Intl.NumberFormat("en-GB", { style:"currency", currency:"GBP", maximumFractionDigits:0 });
-  return <div className="mx-auto max-w-[1500px]">
-    <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 md:flex-row md:items-end md:justify-between"><div><p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Opportunity command view</p><h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">{opportunity.title}</h1><p className="mt-4 text-sm text-[var(--muted)]">{opportunity.reference} · {opportunity.customers?.display_name || opportunity.customers?.name} · {opportunity.sites?.name}</p></div><Link href="/dashboard/opportunities" className="w-fit border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Return to register</Link></header>
-    {query.error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{query.error}</p> : null}
-    {query.updated ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Workflow updated successfully.</p> : null}
-    <section className="mt-7 grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4"><div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Stage</p><p className="mt-2 text-2xl font-medium">{titleCase(opportunity.stage)}</p></div><div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Readiness</p><p className="mt-2 text-2xl font-medium">{readinessScore}%</p></div><div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Estimated value</p><p className="mt-2 text-2xl font-medium">{money.format(Number(opportunity.estimated_value_gbp ?? 0))}</p></div><div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Owner</p><p className="mt-2 text-sm font-semibold">{opportunity.profiles?.full_name ?? "Unassigned"}</p></div></section>
 
-    <section className="mt-7 border border-[var(--line)]"><div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Customer readiness</p><h2 className="mt-2 text-2xl font-medium">Evidence checklist</h2><p className="mt-2 text-sm text-[var(--muted)]">{accepted} of {total} items accepted or waived.</p></div>
-      <div className="divide-y divide-[var(--line)]">{readiness?.map(item => <form key={item.id} action={updateReadiness} className="grid gap-4 p-5 lg:grid-cols-[220px_160px_1fr_1fr_auto] lg:items-end"><input type="hidden" name="opportunity_id" value={id}/><input type="hidden" name="item_type" value={item.item_type}/><div><p className="text-sm font-semibold">{labels[item.item_type] ?? titleCase(item.item_type)}</p><p className="mt-1 text-xs text-[var(--muted)]">Current: {titleCase(item.status)}</p></div><label className="text-xs font-semibold">Status<select name="status" defaultValue={item.status} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{readinessStatuses.map(status => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label><label className="text-xs font-semibold">Evidence link<input name="evidence_url" defaultValue={item.evidence_url ?? ""} placeholder="Drive or storage URL" className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><label className="text-xs font-semibold">Review note<input name="review_note" defaultValue={item.review_note ?? ""} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><button className="min-h-10 border border-[var(--line)] px-4 text-xs font-semibold">Save</button></form>)}</div>
-    </section>
+  const customer = firstRelation(opportunity.customers);
+  const site = firstRelation(opportunity.sites);
+  const owner = firstRelation(opportunity.profiles);
+  const accepted = readiness?.filter((item) => item.status === "accepted" || item.status === "waived").length ?? 0;
+  const total = readiness?.length ?? 0;
+  const readinessScore = total ? Math.round((accepted / total) * 100) : 0;
+  const money = new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+    maximumFractionDigits: 0,
+  });
 
-    <section className="mt-7 border border-[var(--line)]"><div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Indicative proposal</p><h2 className="mt-2 text-2xl font-medium">Commercial position</h2><p className="mt-2 text-sm text-[var(--muted)]">Indicative only, before survey, approved design and final BOM.</p></div>
-      <form action={saveProposal} className="grid gap-5 p-5 md:grid-cols-2 md:p-6"><input type="hidden" name="opportunity_id" value={id}/><label className="text-xs font-semibold">Proposal number<input required name="proposal_number" defaultValue={proposal?.proposal_number ?? `${opportunity.reference}-P01`} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal uppercase"/></label><label className="text-xs font-semibold">Status<select name="status" defaultValue={proposal?.status ?? "draft"} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{proposalStatuses.map(status => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label><label className="text-xs font-semibold">PV capacity (kWp)<input name="pv_capacity_kwp" type="number" step="0.01" defaultValue={proposal?.pv_capacity_kwp ?? opportunity.estimated_pv_kwp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><label className="text-xs font-semibold">Battery capacity (kWh)<input name="battery_capacity_kwh" type="number" step="0.01" defaultValue={proposal?.battery_capacity_kwh ?? opportunity.estimated_battery_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><label className="text-xs font-semibold">Estimated generation (kWh/year)<input name="estimated_generation_kwh" type="number" step="0.01" defaultValue={proposal?.estimated_generation_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><label className="text-xs font-semibold">Estimated annual saving (£)<input name="estimated_annual_saving_gbp" type="number" step="0.01" defaultValue={proposal?.estimated_annual_saving_gbp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><label className="text-xs font-semibold">Indicative price (£)<input name="indicative_price_gbp" type="number" step="0.01" defaultValue={proposal?.indicative_price_gbp ?? opportunity.estimated_value_gbp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><label className="text-xs font-semibold">Valid until<input name="valid_until" type="date" defaultValue={proposal?.valid_until ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal"/></label><label className="text-xs font-semibold md:col-span-2">Assumptions<textarea name="assumptions" rows={4} defaultValue={proposal?.assumptions ?? ""} className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-3 text-sm font-normal"/></label><label className="text-xs font-semibold md:col-span-2">Exclusions<textarea name="exclusions" rows={4} defaultValue={proposal?.exclusions ?? ""} className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-3 text-sm font-normal"/></label><div className="md:col-span-2 flex justify-end"><button className="min-h-11 border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)]">Save indicative proposal</button></div></form>
-    </section>
-  </div>;
+  return (
+    <div className="mx-auto max-w-[1500px]">
+      <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Opportunity command view</p>
+          <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">{opportunity.title}</h1>
+          <p className="mt-4 text-sm text-[var(--muted)]">
+            {opportunity.reference} · {customer?.display_name || customer?.name || "Customer"} · {site?.name || "Site"}
+          </p>
+        </div>
+        <Link href="/dashboard/opportunities" className="w-fit border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">
+          Return to register
+        </Link>
+      </header>
+
+      {query.error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{query.error}</p> : null}
+      {query.updated ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Workflow updated successfully.</p> : null}
+
+      <section className="mt-7 grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4">
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Stage</p><p className="mt-2 text-2xl font-medium">{titleCase(opportunity.stage)}</p></div>
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Readiness</p><p className="mt-2 text-2xl font-medium">{readinessScore}%</p></div>
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Estimated value</p><p className="mt-2 text-2xl font-medium">{money.format(Number(opportunity.estimated_value_gbp ?? 0))}</p></div>
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Owner</p><p className="mt-2 text-sm font-semibold">{owner?.full_name ?? "Unassigned"}</p></div>
+      </section>
+
+      <section className="mt-7 border border-[var(--line)]">
+        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Customer readiness</p><h2 className="mt-2 text-2xl font-medium">Evidence checklist</h2><p className="mt-2 text-sm text-[var(--muted)]">{accepted} of {total} items accepted or waived.</p></div>
+        <div className="divide-y divide-[var(--line)]">
+          {readiness?.map((item) => (
+            <form key={item.id} action={updateReadiness} className="grid gap-4 p-5 lg:grid-cols-[220px_160px_1fr_1fr_auto] lg:items-end">
+              <input type="hidden" name="opportunity_id" value={id} />
+              <input type="hidden" name="item_type" value={item.item_type} />
+              <div><p className="text-sm font-semibold">{labels[item.item_type] ?? titleCase(item.item_type)}</p><p className="mt-1 text-xs text-[var(--muted)]">Current: {titleCase(item.status)}</p></div>
+              <label className="text-xs font-semibold">Status<select name="status" defaultValue={item.status} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{readinessStatuses.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label>
+              <label className="text-xs font-semibold">Evidence link<input name="evidence_url" defaultValue={item.evidence_url ?? ""} placeholder="Drive or storage URL" className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+              <label className="text-xs font-semibold">Review note<input name="review_note" defaultValue={item.review_note ?? ""} className="mt-2 min-h-10 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+              <button className="min-h-10 border border-[var(--line)] px-4 text-xs font-semibold">Save</button>
+            </form>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-7 border border-[var(--line)]">
+        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Indicative proposal</p><h2 className="mt-2 text-2xl font-medium">Commercial position</h2><p className="mt-2 text-sm text-[var(--muted)]">Indicative only, before survey, approved design and final BOM.</p></div>
+        <form action={saveProposal} className="grid gap-5 p-5 md:grid-cols-2 md:p-6">
+          <input type="hidden" name="opportunity_id" value={id} />
+          <label className="text-xs font-semibold">Proposal number<input required name="proposal_number" defaultValue={proposal?.proposal_number ?? `${opportunity.reference}-P01`} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal uppercase" /></label>
+          <label className="text-xs font-semibold">Status<select name="status" defaultValue={proposal?.status ?? "draft"} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{proposalStatuses.map((status) => <option key={status} value={status}>{titleCase(status)}</option>)}</select></label>
+          <label className="text-xs font-semibold">PV capacity (kWp)<input name="pv_capacity_kwp" type="number" step="0.01" defaultValue={proposal?.pv_capacity_kwp ?? opportunity.estimated_pv_kwp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+          <label className="text-xs font-semibold">Battery capacity (kWh)<input name="battery_capacity_kwh" type="number" step="0.01" defaultValue={proposal?.battery_capacity_kwh ?? opportunity.estimated_battery_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+          <label className="text-xs font-semibold">Estimated generation (kWh/year)<input name="estimated_generation_kwh" type="number" step="0.01" defaultValue={proposal?.estimated_generation_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+          <label className="text-xs font-semibold">Estimated annual saving (£)<input name="estimated_annual_saving_gbp" type="number" step="0.01" defaultValue={proposal?.estimated_annual_saving_gbp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+          <label className="text-xs font-semibold">Indicative price (£)<input name="indicative_price_gbp" type="number" step="0.01" defaultValue={proposal?.indicative_price_gbp ?? opportunity.estimated_value_gbp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+          <label className="text-xs font-semibold">Valid until<input name="valid_until" type="date" defaultValue={proposal?.valid_until ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
+          <label className="text-xs font-semibold md:col-span-2">Assumptions<textarea name="assumptions" rows={4} defaultValue={proposal?.assumptions ?? ""} className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-3 text-sm font-normal" /></label>
+          <label className="text-xs font-semibold md:col-span-2">Exclusions<textarea name="exclusions" rows={4} defaultValue={proposal?.exclusions ?? ""} className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-3 text-sm font-normal" /></label>
+          <div className="flex justify-end md:col-span-2"><button className="min-h-11 border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)]">Save indicative proposal</button></div>
+        </form>
+      </section>
+    </div>
+  );
 }
