@@ -74,7 +74,7 @@ export async function saveGovernedProposal(fd: FormData) {
       .maybeSingle(),
     supabase
       .from("opportunity_readiness_items")
-      .select("item_type,status")
+      .select("item_type,status,is_required")
       .eq("opportunity_id", opportunityId)
       .eq("organisation_id", organisationId),
   ]);
@@ -129,9 +129,10 @@ export async function saveGovernedProposal(fd: FormData) {
       fail(path, "Assign both a Customer and Site before issuing the proposal.");
     }
 
-    const blockers = (readiness ?? []).filter((item) => item.status !== "accepted" && item.status !== "waived");
-    if (!readiness?.length || blockers.length > 0) {
-      fail(path, `Proposal issue is blocked by ${blockers.length || "missing"} readiness item${blockers.length === 1 ? "" : "s"}.`);
+    const requiredItems = (readiness ?? []).filter((item) => item.is_required);
+    const blockers = requiredItems.filter((item) => item.status !== "accepted" && item.status !== "waived");
+    if (!requiredItems.length || blockers.length > 0) {
+      fail(path, `Proposal issue is blocked by ${blockers.length || "missing"} required readiness item${blockers.length === 1 ? "" : "s"}.`);
     }
 
     if (!commercial.pv_capacity_kwp || !commercial.indicative_price_gbp) {
@@ -147,42 +148,29 @@ export async function saveGovernedProposal(fd: FormData) {
   }
 
   const now = new Date().toISOString();
-  const payload = {
-    organisation_id: organisationId,
-    opportunity_id: opportunityId,
-    proposal_number: proposalNumber,
-    status: requestedStatus,
-    ...commercial,
-    issued_at: requestedStatus === "issued" ? now : existing?.issued_at ?? null,
-    updated_at: now,
-  };
-
-  const { error } = await supabase
-    .from("indicative_proposals")
-    .upsert(payload, { onConflict: "opportunity_id" });
-  if (error) fail(path, error.message);
-
+  const issuedAt = requestedStatus === "issued" ? now : existing?.issued_at ?? null;
   const opportunityStage = requestedStatus === "accepted"
     ? "won"
     : requestedStatus === "declined"
       ? "lost"
       : "proposal";
-
-  const { error: stageError } = await supabase
-    .from("opportunities")
-    .update({ stage: opportunityStage, updated_at: now })
-    .eq("id", opportunityId)
-    .eq("organisation_id", organisationId);
-  if (stageError) fail(path, "Proposal saved, but the Opportunity stage could not be synchronised.");
-
   const eventType = requestedStatus === "draft" ? "proposal.draft_saved" : `proposal.${requestedStatus}`;
-  const { error: auditError } = await supabase.from("activity_logs").insert({
-    organisation_id: organisationId,
-    actor_id: user.id,
-    event_type: eventType,
-    description: `Indicative proposal ${proposalNumber} ${requestedStatus}`,
+
+  const { error: commitError } = await supabase.rpc("commit_governed_proposal", {
+    p_organisation_id: organisationId,
+    p_opportunity_id: opportunityId,
+    p_proposal_number: proposalNumber,
+    p_status: requestedStatus,
+    p_commercial: commercial,
+    p_issued_at: issuedAt,
+    p_opportunity_stage: opportunityStage,
+    p_event_type: eventType,
+    p_description: `Indicative proposal ${proposalNumber} ${requestedStatus}`,
   });
-  if (auditError) fail(path, "Proposal saved, but its audit event could not be recorded.");
+
+  if (commitError) {
+    fail(path, `Proposal was not committed. No partial workflow changes were retained. ${commitError.message}`);
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/opportunities");

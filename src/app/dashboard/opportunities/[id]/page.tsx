@@ -5,6 +5,7 @@ import { updateOpportunity } from "../actions";
 import { ProposalGovernance } from "./proposal-governance";
 import { ReadinessGovernance } from "./readiness-governance";
 import { RelationshipAssignment } from "./relationship-assignment";
+import { WorkflowProof } from "./workflow-proof";
 
 const opportunityStages = ["lead", "qualified", "readiness", "proposal", "won", "lost"];
 
@@ -70,6 +71,15 @@ export default async function OpportunityPage({ params, searchParams }: { params
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Estimated value</p><p className="mt-2 text-2xl font-medium">{opportunity.estimated_value_gbp == null ? "Not estimated" : money.format(Number(opportunity.estimated_value_gbp))}</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Owner</p><p className="mt-2 text-sm font-semibold">{owner?.full_name ?? "Unassigned"}</p></div>
       </section>
+
+      <WorkflowProof
+        customerAssigned={Boolean(opportunity.customer_id)}
+        siteAssigned={Boolean(opportunity.site_id)}
+        requiredReadinessTotal={requiredReadiness.length}
+        requiredReadinessComplete={acceptedRequired}
+        proposalStatus={proposal?.status ?? null}
+        opportunityStage={opportunity.stage}
+      />
 
       <section className="mt-7 border border-[var(--line)]">
         <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Relationship control</p><h2 className="mt-2 text-2xl font-medium">Customer and Site assignment</h2><p className="mt-2 text-sm text-[var(--muted)]">Assign governed records after intake. Site choices are filtered by Customer and conflicts are blocked server-side.</p></div>
