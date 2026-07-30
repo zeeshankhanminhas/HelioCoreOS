@@ -6,6 +6,7 @@ import { ProposalGovernance } from "./proposal-governance";
 import { ReadinessGovernance } from "./readiness-governance";
 import { RelationshipAssignment } from "./relationship-assignment";
 import { SiteSurveyGovernance } from "./site-survey-governance";
+import { SystemDesignGovernance } from "./system-design-governance";
 import { WorkflowProof } from "./workflow-proof";
 
 const opportunityStages = ["lead", "qualified", "readiness", "proposal", "won", "lost"];
@@ -26,11 +27,12 @@ export default async function OpportunityPage({ params, searchParams }: { params
   const query = await searchParams;
   const supabase = await createClient();
 
-  const [opportunityResult, readinessResult, proposalResult, surveyResult, customersResult, sitesResult, profilesResult] = await Promise.all([
+  const [opportunityResult, readinessResult, proposalResult, surveyResult, designResult, customersResult, sitesResult, profilesResult] = await Promise.all([
     supabase.from("opportunities").select("id,title,reference,stage,lead_source,customer_id,site_id,owner_id,estimated_pv_kwp,estimated_battery_kwh,estimated_value_gbp,notes,customers(name,display_name),sites(name,postcode),profiles(full_name)").eq("id", id).single(),
     supabase.from("opportunity_readiness_items").select("id,item_type,status,evidence_url,review_note,decision_note,is_required,reviewed_by,reviewed_at,updated_at").eq("opportunity_id", id).order("item_type"),
     supabase.from("indicative_proposals").select("*").eq("opportunity_id", id).maybeSingle(),
     supabase.from("site_surveys").select("*").eq("opportunity_id", id).maybeSingle(),
+    supabase.from("system_designs").select("*").eq("opportunity_id", id).order("revision", { ascending: false }).limit(1).maybeSingle(),
     supabase.from("customers").select("id,name,display_name").order("name"),
     supabase.from("sites").select("id,customer_id,name,postcode").order("name"),
     supabase.from("profiles").select("id,full_name").eq("status", "active").order("full_name"),
@@ -41,6 +43,8 @@ export default async function OpportunityPage({ params, searchParams }: { params
   const readiness = readinessResult.data ?? [];
   const proposal = proposalResult.data;
   const survey = surveyResult.data;
+  const design = designResult.data;
+  const approvedSurvey = survey?.status === "approved" ? survey : null;
   const customer = firstRelation(opportunity.customers);
   const site = firstRelation(opportunity.sites);
   const owner = firstRelation(opportunity.profiles);
@@ -49,7 +53,7 @@ export default async function OpportunityPage({ params, searchParams }: { params
   const readinessScore = requiredReadiness.length ? Math.round((acceptedRequired / requiredReadiness.length) * 100) : 100;
   const reviewerNames = Object.fromEntries((profilesResult.data ?? []).map((profile) => [profile.id, profile.full_name || "Unnamed user"]));
   const money = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
-  const loadFailure = readinessResult.error || proposalResult.error || surveyResult.error || customersResult.error || sitesResult.error || profilesResult.error;
+  const loadFailure = readinessResult.error || proposalResult.error || surveyResult.error || designResult.error || customersResult.error || sitesResult.error || profilesResult.error;
 
   return (
     <div className="mx-auto max-w-[1500px]">
@@ -68,10 +72,11 @@ export default async function OpportunityPage({ params, searchParams }: { params
       {loadFailure ? <p className="mt-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">Some related workflow data could not be loaded. Do not make decisions from incomplete information; refresh before continuing.</p> : null}
       {!opportunity.customer_id || !opportunity.site_id ? <p className="mt-6 border border-[var(--line)] px-4 py-3 text-sm"><span className="font-semibold">Progressive intake:</span> {!opportunity.customer_id ? "Customer" : "Site"}{!opportunity.customer_id && !opportunity.site_id ? " and site are" : " is"} still unassigned. This is permitted at lead stage but must be resolved before governed proposal issue.</p> : null}
 
-      <section className="mt-7 grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">
+      <section className="mt-7 grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-6">
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Stage</p><p className="mt-2 text-2xl font-medium">{titleCase(opportunity.stage)}</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Required readiness</p><p className="mt-2 text-2xl font-medium">{readinessScore}%</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Site survey</p><p className="mt-2 text-lg font-medium">{titleCase(survey?.status ?? "not started")}</p></div>
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">System design</p><p className="mt-2 text-lg font-medium">{titleCase(design?.status ?? "not started")}</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Estimated value</p><p className="mt-2 text-2xl font-medium">{opportunity.estimated_value_gbp == null ? "Not estimated" : money.format(Number(opportunity.estimated_value_gbp))}</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Owner</p><p className="mt-2 text-sm font-semibold">{owner?.full_name ?? "Unassigned"}</p></div>
       </section>
@@ -112,6 +117,14 @@ export default async function OpportunityPage({ params, searchParams }: { params
       <ReadinessGovernance opportunityId={id} items={readiness} reviewerNames={reviewerNames} />
 
       <SiteSurveyGovernance opportunityId={id} siteId={opportunity.site_id} opportunityReference={opportunity.reference} survey={survey} />
+
+      <SystemDesignGovernance
+        opportunityId={id}
+        siteId={opportunity.site_id}
+        opportunityReference={opportunity.reference}
+        approvedSurvey={approvedSurvey}
+        design={design}
+      />
 
       <ProposalGovernance
         opportunityId={id}
