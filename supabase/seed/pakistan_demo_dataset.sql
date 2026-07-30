@@ -342,23 +342,23 @@ begin
   end loop;
 
   for i in 1..50 loop
-    insert into public.activity_logs (id, organisation_id, actor_id, event_type, description, created_at) values
-      (pg_temp.demo_uuid('pk-demo-activity-' || i || '-1'), v_org, v_actor, 'demo.opportunity_created', 'PK-DEMO-OPP-' || lpad(i::text,3,'0') || ' created from Pakistan commercial intake.', now() - make_interval(days => 150 - least(i,45) * 2)),
-      (pg_temp.demo_uuid('pk-demo-activity-' || i || '-2'), v_org, v_actor, 'demo.relationships_assigned', 'Customer and Site assigned to PK-DEMO-OPP-' || lpad(i::text,3,'0') || '.', now() - make_interval(days => 142 - least(i,45) * 2)),
-      (pg_temp.demo_uuid('pk-demo-activity-' || i || '-3'), v_org, v_actor, 'demo.readiness_progressed', 'Readiness evidence progressed for PK-DEMO-OPP-' || lpad(i::text,3,'0') || '.', now() - make_interval(days => 132 - least(i,45) * 2));
+    insert into public.activity_logs (organisation_id, actor_id, event_type, description, created_at) values
+      (v_org, v_actor, 'demo.opportunity_created', 'PK-DEMO-OPP-' || lpad(i::text,3,'0') || ' created from Pakistan commercial intake.', now() - make_interval(days => 150 - least(i,45) * 2)),
+      (v_org, v_actor, 'demo.relationships_assigned', 'Customer and Site assigned to PK-DEMO-OPP-' || lpad(i::text,3,'0') || '.', now() - make_interval(days => 142 - least(i,45) * 2)),
+      (v_org, v_actor, 'demo.readiness_progressed', 'Readiness evidence progressed for PK-DEMO-OPP-' || lpad(i::text,3,'0') || '.', now() - make_interval(days => 132 - least(i,45) * 2));
   end loop;
   for i in 1..40 loop
-    insert into public.activity_logs (id, organisation_id, actor_id, event_type, description, created_at)
-    values (pg_temp.demo_uuid('pk-demo-proposal-activity-' || i), v_org, v_actor, 'demo.proposal_progressed', 'PK-DEMO-PROP-' || lpad(i::text,3,'0') || ' progressed through governed commercial workflow.', now() - make_interval(days => 38 + i % 20));
+    insert into public.activity_logs (organisation_id, actor_id, event_type, description, created_at)
+    values (v_org, v_actor, 'demo.proposal_progressed', 'PK-DEMO-PROP-' || lpad(i::text,3,'0') || ' progressed through governed commercial workflow.', now() - make_interval(days => 38 + i % 20));
   end loop;
   for i in 1..30 loop
-    insert into public.activity_logs (id, organisation_id, actor_id, event_type, description, created_at)
-    values (pg_temp.demo_uuid('pk-demo-survey-activity-' || i), v_org, v_actor, 'demo.site_survey_progressed', 'PK-DEMO-SUR-' || lpad(i::text,3,'0') || ' progressed through field-survey governance.', now() - make_interval(days => 26 + i % 12));
+    insert into public.activity_logs (organisation_id, actor_id, event_type, description, created_at)
+    values (v_org, v_actor, 'demo.site_survey_progressed', 'PK-DEMO-SUR-' || lpad(i::text,3,'0') || ' progressed through field-survey governance.', now() - make_interval(days => 26 + i % 12));
   end loop;
   for i in 1..25 loop
-    insert into public.activity_logs (id, organisation_id, actor_id, event_type, description, created_at) values
-      (pg_temp.demo_uuid('pk-demo-design-activity-' || i), v_org, v_actor, 'demo.system_design_progressed', 'PK-DEMO-DES-' || lpad(i::text,3,'0') || ' progressed through engineering governance.', now() - make_interval(days => 18 + i % 10)),
-      (pg_temp.demo_uuid('pk-demo-project-activity-' || i), v_org, v_actor, 'demo.project_created', 'PK-DEMO-PRJ-' || lpad(i::text,3,'0') || ' created from the accepted commercial opportunity.', now() - make_interval(days => 12 + i % 8));
+    insert into public.activity_logs (organisation_id, actor_id, event_type, description, created_at) values
+      (v_org, v_actor, 'demo.system_design_progressed', 'PK-DEMO-DES-' || lpad(i::text,3,'0') || ' progressed through engineering governance.', now() - make_interval(days => 18 + i % 10)),
+      (v_org, v_actor, 'demo.project_created', 'PK-DEMO-PRJ-' || lpad(i::text,3,'0') || ' created from the accepted commercial opportunity.', now() - make_interval(days => 12 + i % 8));
   end loop;
 
   raise notice 'Pakistan demo dataset seeded for organisation %: 25 customers, 35 sites, 50 opportunities and 25 projects.', v_org;
