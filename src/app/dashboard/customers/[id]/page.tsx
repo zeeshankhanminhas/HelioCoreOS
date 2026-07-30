@@ -6,8 +6,9 @@ function titleCase(value: string | null) {
   return value ? value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase()) : "Not set";
 }
 
-export default async function CustomerPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CustomerPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ updated?: string }> }) {
   const { id } = await params;
+  const query = await searchParams;
   const supabase = await createClient();
   const [{ data: customer }, { data: sites }, { data: projects }] = await Promise.all([
     supabase.from("customers").select("id, name, display_name, customer_kind, title, given_name, middle_name, family_name, organisation_name, customer_category, country_code, contact_name, contact_email, phone, registration_identifier, tax_identifier, currency_code, payment_terms_days, status, notes, created_at").eq("id", id).single(),
@@ -32,10 +33,13 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
           <p className="mt-4 text-sm text-[var(--muted)]">{titleCase(customer.customer_kind)} · {titleCase(customer.customer_category)} · {titleCase(customer.status)}</p>
         </div>
         <div className="flex flex-wrap gap-3">
+          <Link href={`/dashboard/customers/${id}/edit`} className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Edit customer</Link>
           <Link href={`/dashboard/sites/new?customer=${customer.id}`} className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Add site</Link>
           <Link href="/dashboard/customers" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Customer register</Link>
         </div>
       </header>
+
+      {query.updated ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Customer updated and audit event recorded.</p> : null}
 
       <section className="mt-7 grid gap-px border border-[var(--line)] bg-[var(--line)] sm:grid-cols-3">
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">Sites</p><p className="mt-3 text-3xl font-medium">{sites?.length ?? 0}</p></div>
@@ -57,7 +61,7 @@ export default async function CustomerPage({ params }: { params: Promise<{ id: s
       <div className="mt-7 grid gap-7 xl:grid-cols-2">
         <section className="border border-[var(--line)]">
           <div className="flex items-center justify-between border-b border-[var(--line)] p-5"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Delivery locations</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Linked sites</h2></div><Link href={`/dashboard/sites/new?customer=${customer.id}`} className="text-xs font-semibold text-[var(--accent)]">Add site</Link></div>
-          {sites?.length ? <div className="divide-y divide-[var(--line)]">{sites.map((site) => <div key={site.id} className="flex items-center justify-between gap-4 p-5"><div><p className="text-sm font-semibold">{site.name}</p><p className="mt-1 text-xs text-[var(--muted)]">{site.address || "No address"}{site.postcode ? ` · ${site.postcode}` : ""}</p></div><Link href={`/dashboard/projects/new?customer=${customer.id}&site=${site.id}`} className="shrink-0 border border-[var(--line)] px-3 py-2 text-xs font-semibold">New project</Link></div>)}</div> : <p className="p-6 text-sm text-[var(--muted)]">No sites are linked to this customer yet.</p>}
+          {sites?.length ? <div className="divide-y divide-[var(--line)]">{sites.map((site) => <div key={site.id} className="flex items-center justify-between gap-4 p-5"><div><Link href={`/dashboard/sites/${site.id}`} className="text-sm font-semibold hover:text-[var(--accent)]">{site.name}</Link><p className="mt-1 text-xs text-[var(--muted)]">{site.address || "No address"}{site.postcode ? ` · ${site.postcode}` : ""}</p></div><Link href={`/dashboard/projects/new?customer=${customer.id}&site=${site.id}`} className="shrink-0 border border-[var(--line)] px-3 py-2 text-xs font-semibold">New project</Link></div>)}</div> : <p className="p-6 text-sm text-[var(--muted)]">No sites are linked to this customer yet.</p>}
         </section>
 
         <section className="border border-[var(--line)]">
