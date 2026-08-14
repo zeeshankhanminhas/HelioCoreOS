@@ -73,7 +73,7 @@ The repository reserves [`services/heliocalc`](./services/heliocalc/README.md) f
 
 HelioCoreOS treats documents as governed business objects rather than unmanaged file attachments.
 
-The governing Document Suite architecture is documented in [Document Suite Architecture](./docs/DOCUMENT-SUITE-ARCHITECTURE.md).
+The governing architecture is documented in [Document Suite Architecture](./docs/DOCUMENT-SUITE-ARCHITECTURE.md).
 
 The product uses a dual-context document model:
 
