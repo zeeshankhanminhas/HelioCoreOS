@@ -2,6 +2,7 @@
 
 > Governing reference: [HelioCoreOS Constitution](./CONSTITUTION.md)  
 > UI reference: [UI Component Strategy](./UI-COMPONENT-STRATEGY.md)  
+> Engineering reference: [HelioCalc Engineering Engine](./HELIOCALC-ENGINE.md)  
 > Project profile: HelioCoreOS Solar EPC  
 > Change classification: Project Extension  
 > Core references: CORE-CTX-001, CORE-NAV-001, CORE-DATA-001, CORE-STATE-001, CORE-DOC-001, CORE-APP-001, CORE-AUDIT-001, CORE-FAIL-001, CORE-UX-001
@@ -127,8 +128,15 @@ The following remain outside Launch V1 until the core commercial workflow is pro
 - contract execution;
 - automatic Opportunity-to-Project conversion;
 - full survey workflow;
-- engineering calculation engines;
-- approved BOM;
+- HelioCalc equipment technical-data and datasheet registry;
+- Python Solar PV electrical calculation engine;
+- string, MPPT, inverter and temperature-condition validation;
+- cable sizing, voltage-drop and electrical-design calculations;
+- BESS sizing and dispatch modelling;
+- time-series PV/load/BESS/grid simulation;
+- engineering guardrail engine;
+- engineering scenario comparison and reproducible calculation revisions;
+- approved BOM generated from approved engineering;
 - supplier pricing;
 - procurement and inventory;
 - vendor and subcontractor portals;
@@ -145,6 +153,50 @@ The following remain outside Launch V1 until the core commercial workflow is pro
 - automated recurring billing.
 
 These are separate Project Additions. Each must reference the Core Constitution and define its own lifecycle, states, documents, approvals, permissions, audit behaviour and failure handling.
+
+## Engineering intelligence boundary
+
+Future Solar EPC engineering capability is governed by a deliberate two-layer architecture.
+
+```text
+HelioCoreOS
+= operating workflow, state, approval, revision, audit and downstream control
+
+HelioCalc
+= deterministic Python engineering calculation service
+```
+
+HelioCoreOS must not embed increasingly complex engineering mathematics directly into presentation components or uncontrolled client-side helpers.
+
+The intended engineering path is:
+
+```text
+Approved Site Survey
+→ Engineering Scenario
+→ Governed Equipment Selection
+→ HelioCalc Calculation
+→ Engineering Findings
+→ Design Review
+→ Approved Design Revision
+→ BOM
+→ Procurement
+```
+
+Manufacturer datasheets are part of the engineering evidence model. Structured technical parameters must retain provenance and revision identity so an approved historical design can be reproduced against the exact equipment data that supported it.
+
+As HelioCalc matures, derived engineering values should become calculation outputs rather than duplicated manually entered fields. User overrides must be explicit and auditable.
+
+The first HelioCalc delivery programme is:
+
+1. equipment-data and datasheet foundation;
+2. PV electrical core and guardrails;
+3. cable/electrical calculations;
+4. BESS sizing;
+5. time-series performance simulation;
+6. approved-design-driven BOM;
+7. production hardening and regression proof.
+
+HelioCalc remains outside Launch V1, but future Engineering work must conform to this boundary rather than introducing a competing calculation architecture.
 
 ## Launch readiness test
 
