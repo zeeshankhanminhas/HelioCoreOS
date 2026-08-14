@@ -2,7 +2,11 @@
 
 This directory is reserved for the Python engineering service defined in [`docs/HELIOCALC-ENGINE.md`](../../docs/HELIOCALC-ENGINE.md).
 
+The engineering experience that consumes this service is governed by [`docs/HELIOCALC-UX.md`](../../docs/HELIOCALC-UX.md).
+
 HelioCalc is not a replacement for the HelioCoreOS application. It is the deterministic calculation authority used by the Engineering domain.
+
+The Python service owns calculation truth; HelioCoreOS owns the engineering cockpit, workflow context, evidence presentation, review and approval experience.
 
 ## Intended responsibilities
 
@@ -59,4 +63,4 @@ services/heliocalc/
 └── tests/
 ```
 
-The first implementation milestone is the equipment-data foundation followed by the PV electrical core. Production code should not be added until the input/output contract and reference calculation cases are defined.
+The first implementation milestone is the equipment-data foundation followed by the PV electrical core. The UI programme begins in parallel with the Engineering Cockpit shell so technical capability never grows into an unstructured long form. Production calculation code should not be added until the input/output contract and reference calculation cases are defined.
