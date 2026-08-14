@@ -24,16 +24,20 @@ Customer / Site / Opportunity / Survey
         ↓
 Governed Engineering Scenario
         ↓
+Released Equipment Data + active rule/context revisions
+        ↓
 HelioCalc API
 Python calculation service
         ↓
 Sizing + electrical checks + simulation + guardrails
         ↓
-Calculation Result + Warnings + Evidence
+Calculation Result + Findings + Evidence
+        ↓
+Structural / Grid / Drawing reconciliation as applicable
         ↓
 Governed Engineering Revision
         ↓
-BOM / Quote / Procurement / Delivery
+BOM / Quote / Procurement / Delivery / Commissioning
 ```
 
 ## 2. Product principle
@@ -44,9 +48,16 @@ Where a calculation can be derived from controlled inputs and manufacturer techn
 
 A user may override a calculated recommendation only when the workflow explicitly permits an engineering override. An override must record the previous value, replacement value, actor, reason and approval status.
 
+A calculation domain becomes authoritative only after it satisfies the applicable release and benchmark gates in:
+
+- [Engineering Accuracy and Validation](./ENGINEERING-ACCURACY-VALIDATION.md)
+- [Test and Validation Strategy](./TEST-VALIDATION-STRATEGY.md)
+
 ## 3. Equipment technical-data catalogue
 
-HelioCalc depends on a governed equipment catalogue backed by manufacturer datasheets.
+HelioCalc depends on a governed equipment catalogue backed by manufacturer evidence.
+
+The source-to-release workflow is defined in [Equipment Data Verification](./EQUIPMENT-DATA-VERIFICATION.md).
 
 Each equipment record must carry:
 
@@ -57,6 +68,7 @@ Each equipment record must carry:
 - datasheet revision or publication date where available;
 - technical-data extraction status;
 - verification status;
+- release status;
 - effective-from and superseded dates where applicable;
 - structured technical parameters;
 - original datasheet file or controlled link;
@@ -162,6 +174,10 @@ heliocalc/
 ```
 
 The package structure may evolve, but the separation between engineering domains and the HelioCoreOS application must remain clear.
+
+Structural calculations are **not** implicitly part of the generic PV engine. The current boundary is governed by [Structural Engineering Boundary](./STRUCTURAL-ENGINEERING-BOUNDARY.md). If structural calculation capability is later implemented, it requires its own method/profile, benchmark scope and authority gate.
+
+Grid/authority approval is also not calculated into existence by HelioCalc. Grid technical constraints are supplied through the governed [Grid and Interconnection Architecture](./GRID-INTERCONNECTION-ARCHITECTURE.md).
 
 ## 5. Core PV calculations
 
@@ -359,6 +375,9 @@ A scenario contains its own:
 
 - equipment-data revisions;
 - engineering inputs;
+- active Site Survey/design-basis revision;
+- active Grid Connection revision where applicable;
+- structural evidence/readiness dependencies where applicable;
 - calculation result;
 - warnings and blockers;
 - performance result;
@@ -381,6 +400,7 @@ Conceptual response:
   "status": "valid_with_warnings",
   "inputs_fingerprint": "...",
   "equipment_revisions": [],
+  "rule_profile_revisions": [],
   "results": {},
   "findings": [],
   "assumptions": [],
@@ -397,9 +417,11 @@ Every persisted calculation revision must retain enough information to reproduce
 At minimum record:
 
 - engine version;
+- domain validation-state/version;
 - rule-profile version;
 - equipment-data revision IDs;
 - site/survey revision used;
+- grid/interconnection revision used where applicable;
 - user-entered inputs;
 - derived inputs;
 - overrides;
@@ -423,9 +445,10 @@ System Design should evolve into the orchestration and approval surface for:
 ```text
 Approved Site Survey
 → Engineering Scenario
-→ Equipment Selection
+→ Released Equipment Selection
 → HelioCalc Calculation
 → Engineering Findings
+→ Structural / Grid / Drawing evidence as applicable
 → Design Review
 → Approved Design Revision
 → BOM
@@ -484,8 +507,9 @@ HelioCalc should be built incrementally and proven with tests before expanding U
 - equipment taxonomy;
 - datasheet registry;
 - technical parameter schemas;
+- source extraction/normalisation workflow;
 - equipment-data revisions;
-- verification workflow;
+- verification/release workflow;
 - initial Pakistan-relevant module, inverter and BESS sample catalogue.
 
 ### Phase H2 — PV electrical core
@@ -498,7 +522,8 @@ HelioCalc should be built incrementally and proven with tests before expanding U
 - inverter sizing;
 - DC/AC ratio;
 - machine-readable guardrails;
-- deterministic unit-test reference cases.
+- deterministic unit-test reference cases;
+- independent benchmark pack.
 
 ### Phase H3 — Cable and electrical design
 
@@ -507,7 +532,8 @@ HelioCalc should be built incrementally and proven with tests before expanding U
 - voltage drop;
 - derating inputs;
 - protective-device inputs;
-- rule profiles and evidence.
+- rule profiles and evidence;
+- independent benchmark pack.
 
 ### Phase H4 — BESS core
 
@@ -515,7 +541,8 @@ HelioCalc should be built incrementally and proven with tests before expanding U
 - charge/discharge power sizing;
 - SOC constraints;
 - critical-load/backup-duration sizing;
-- equipment compatibility checks.
+- equipment compatibility checks;
+- validation fixtures for supported scope.
 
 ### Phase H5 — Time-series performance engine
 
@@ -526,14 +553,16 @@ HelioCalc should be built incrementally and proven with tests before expanding U
 - grid interaction;
 - losses;
 - energy-balance proof;
-- scenario comparison.
+- scenario comparison;
+- reference/model validation.
 
 ### Phase H6 — Governed BOM generation
 
 - approved design to BOM;
 - equipment and balance-of-system quantities;
 - revision traceability;
-- engineering-versus-commercial separation.
+- engineering-versus-commercial separation;
+- Engineering Revision ↔ BOM reconciliation.
 
 ### Phase H7 — Production hardening
 
@@ -541,6 +570,7 @@ HelioCalc should be built incrementally and proven with tests before expanding U
 - performance testing;
 - calculation observability;
 - deterministic regression suite;
+- cross-system reconciliation tests;
 - failure recovery;
 - security review;
 - deployment and rollback strategy.
@@ -563,7 +593,8 @@ Each domain must have:
 - machine-readable findings;
 - failure behaviour;
 - audit integration;
-- engineering review against independently calculated reference cases.
+- engineering review against independently calculated reference cases;
+- declared validation state and scope.
 
 ## 19. Non-goals
 
@@ -575,7 +606,9 @@ HelioCalc is not intended to:
 - silently optimise to a commercially preferred answer;
 - allow procurement to rewrite approved engineering;
 - present uncertain or estimated data as verified datasheet facts;
-- produce an approved design when blocking engineering checks remain unresolved.
+- produce an approved design when blocking engineering checks remain unresolved;
+- claim structural adequacy because a SketchUp layout fits;
+- claim grid/authority acceptance because a calculation passes.
 
 ## 20. Architectural decision
 
@@ -585,6 +618,6 @@ HelioCalc becomes the deterministic Python engineering engine beneath its Engine
 
 The separation is intentional:
 
-> HelioCoreOS governs the work. HelioCalc calculates the system.
+> **HelioCoreOS governs the work. HelioCalc calculates the system. Validation earns authority. External structural/grid evidence constrains what may be approved.**
 
-This boundary should be treated as the default architecture for all future Solar PV, BESS, electrical sizing, simulation, validation and automatic BOM work.
+This boundary should be treated as the default architecture for future Solar PV, BESS, electrical sizing, simulation, validation and automatic BOM work.
