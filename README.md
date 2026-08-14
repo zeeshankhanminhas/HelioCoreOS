@@ -30,6 +30,7 @@ Solar EPC capabilities are implemented as project additions. They may extend the
 - Supabase Auth, PostgreSQL, Storage, and Row Level Security
 - Vercel
 - GitHub
+- planned Python + FastAPI engineering service for HelioCalc
 
 ## UI architecture
 
@@ -40,6 +41,33 @@ The workspace shell, navigation, record hierarchy, lifecycle controls, operation
 The visual language remains:
 
 `Apple-like simplicity + The Ordinary-like clarity + enterprise governance + Solar EPC precision`
+
+## Engineering architecture
+
+HelioCoreOS separates engineering workflow governance from deterministic engineering computation.
+
+- **HelioCoreOS** owns Customer, Site, Opportunity, Survey, Engineering Scenario, approvals, revisions, BOM, procurement and audit history.
+- **HelioCalc** is the planned Python calculation authority for equipment-data-backed Solar PV, BESS and electrical calculations.
+
+The governing architecture is documented in [HelioCalc Engineering Engine](./docs/HELIOCALC-ENGINE.md).
+
+The target engineering path is:
+
+```text
+Approved Site Survey
+→ Engineering Scenario
+→ Equipment Selection
+→ HelioCalc Calculation
+→ Engineering Findings
+→ Design Review
+→ Approved Design Revision
+→ BOM
+→ Procurement
+```
+
+Manufacturer datasheets and structured technical-data revisions are intended to become engineering source data rather than decorative file attachments. Calculated values such as array capacity, string voltage, MPPT compatibility, DC/AC ratio, cable sizing, BESS sizing and time-series performance should move into the Python engine as each domain becomes authoritative.
+
+The repository reserves [`services/heliocalc`](./services/heliocalc/README.md) for this service boundary.
 
 ## Local setup
 
@@ -104,7 +132,12 @@ Customer and Site may be assigned after the Opportunity is created. They are not
 - project conversion;
 - document generation and revision management;
 - configurable approval routes;
-- engineering, procurement, installation, quality, and commissioning control;
+- HelioCalc equipment-data and datasheet foundation;
+- Python Solar PV electrical calculation core;
+- BESS sizing and time-series simulation;
+- governed engineering scenario comparison and design approval;
+- approved-design-driven BOM generation;
+- procurement, installation, quality, and commissioning control;
 - handover packs;
 - operations and maintenance.
 
