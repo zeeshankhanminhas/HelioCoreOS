@@ -118,6 +118,8 @@ Examples:
 - Project;
 - Engineering Scenario;
 - Site Survey;
+- Grid Connection;
+- Drawing Job;
 - Purchase Order;
 - Document revision.
 
@@ -146,17 +148,21 @@ A workflow should not become a top-level module merely because it contains many 
 
 A stable working area inside a record workspace.
 
-HelioCalc Engineering examples:
+Engineering examples:
 
 - Design Basis;
+- Scenarios;
 - Equipment;
-- Strings / MPPT;
-- Electrical;
+- PV Electrical;
 - BESS;
+- Cable & Protection;
+- Structural;
+- Grid & Interconnection;
+- Drawings;
 - Performance;
 - Findings;
 - Outputs;
-- Review.
+- Review & Approval.
 
 These may be tabs, local rail destinations, or nested record routes depending on depth, but they are not global navigation.
 
@@ -169,6 +175,8 @@ Examples:
 - datasheet evidence Sheet;
 - engineering finding detail;
 - circuit detail;
+- structural evidence preview;
+- grid approval evidence;
 - activity history;
 - revision evidence;
 - customer preview;
@@ -217,6 +225,8 @@ Do not add global navigation entries for:
 - Scenario Comparison;
 - Site Survey;
 - Indicative Proposal;
+- Structural Review for one Project;
+- Grid Connection for one Project;
 - BOM for one Project;
 - Drawings for one Project;
 - Datasheet Evidence;
@@ -304,6 +314,9 @@ Project
     ├── PV Electrical
     ├── BESS
     ├── Cable & Protection
+    ├── Structural
+    ├── Grid & Interconnection
+    ├── Drawings
     ├── Performance
     ├── Findings
     ├── Outputs
@@ -337,6 +350,43 @@ Do not create separate calculator pages that force users to copy data between to
 
 The active Scenario supplies shared authoritative context so calculations remain linked and reproducible.
 
+### 7.3 Structural context
+
+Structural work remains inside Engineering/Project context.
+
+The Structural sub-workspace governs:
+
+- structural readiness;
+- mounting/structural evidence;
+- external engineer calculations/approvals;
+- restrictions/conditions;
+- stale evidence when layout/equipment changes.
+
+It must not imply that SketchUp geometry is structural proof.
+
+### 7.4 Grid & Interconnection context
+
+Grid/interconnection also stays Project-owned.
+
+The Grid Connection governed record/sub-workspace owns:
+
+- utility/network identity;
+- connection point and phase/voltage basis;
+- import/export/zero-export constraints;
+- application lifecycle;
+- approval conditions;
+- rule-profile revision;
+- protection/metering evidence;
+- commissioning closeout.
+
+A global `Grid` module is not justified unless future cross-project network work becomes a distinct operational responsibility.
+
+### 7.5 Drawings context
+
+Drawings is an Engineering sub-workspace.
+
+Engineering owns Drawing Jobs. SketchUp/Skelion/LayOut author physical model/layout outputs externally; HelioCoreOS owns drawing identity, revision, reconciliation, review and approval.
+
 ## 8. Equipment catalogue IA
 
 Equipment technical data requires two distinct user contexts.
@@ -354,7 +404,9 @@ When equipment catalogue management becomes operational, a dedicated administrat
 - add equipment;
 - attach datasheets;
 - extract/enter technical parameters;
+- normalise units;
 - verify values;
+- release equipment-data revisions;
 - manage revisions;
 - supersede technical data.
 
@@ -372,6 +424,8 @@ Examples:
 
 - SLD in Engineering Outputs;
 - module datasheet in Equipment evidence;
+- structural calculation in Structural;
+- grid approval in Grid & Interconnection;
 - commissioning certificate in Commissioning;
 - purchase order in Procurement.
 
@@ -497,9 +551,12 @@ Examples:
 - Opportunity → Customer;
 - Scenario → Site Survey revision;
 - Scenario → Equipment revision;
+- Scenario → Grid Connection revision;
+- Scenario → Structural evidence/review;
+- Scenario → Drawing Job revision;
 - BOM line → approved Scenario output;
 - Purchase Order → BOM line;
-- Finding → affected string/circuit/equipment.
+- Finding → affected string/circuit/equipment/drawing/grid/structural evidence.
 
 A related-object link should preserve enough context to return to the originating workflow.
 
@@ -514,6 +571,8 @@ Search results should identify object type and parent context, for example:
 ```text
 PRJ-2026-014 · Project · Lahore Textile Mill
 DES-A · Engineering Scenario · PRJ-2026-014
+GRID-01 · Grid Connection · PRJ-2026-014
+DRG-PV-001 Rev B · Drawing · PRJ-2026-014
 INV-0042 rev 3 · Equipment revision · Huawei SUN2000...
 ```
 
@@ -527,6 +586,9 @@ Prefer:
 - Equipment;
 - Scenario;
 - Site Survey;
+- Structural;
+- Grid & Interconnection;
+- Drawings;
 - Procurement;
 - Commissioning;
 - Calculation evidence;
@@ -563,6 +625,7 @@ Prohibited patterns include:
 - one sidebar item per database table;
 - one sidebar item per lifecycle stage;
 - separate pages for every calculator;
+- global Structural/Grid/Drawings modules for project-specific work without a true cross-project responsibility;
 - dashboards used as parent folders;
 - clickable navigation-domain labels;
 - duplicate Documents workflows;
@@ -596,4 +659,4 @@ The global navigation remains small and stable. Complexity lives inside governed
 
 For Engineering specifically:
 
-> Project owns Engineering. Engineering owns Scenarios. Scenarios own calculations. HelioCalc is the calculation authority, not a navigation destination.
+> **Project owns Engineering. Engineering owns Scenarios and their structural/grid/drawing contexts. Scenarios own calculations. HelioCalc is the calculation authority, not a navigation destination.**
