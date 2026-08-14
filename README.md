@@ -31,6 +31,7 @@ Solar EPC capabilities are implemented as project additions. They may extend the
 - Vercel
 - GitHub
 - planned Python + FastAPI engineering service for HelioCalc
+- pytest + coverage + Ruff validation tooling reserved for HelioCalc
 - SketchUp + Skelion + SketchUp LayOut as the supported external physical drawing-authoring stack
 
 ## UI architecture
@@ -57,14 +58,16 @@ The target engineering path is:
 ```text
 Approved Site Survey
 → Engineering Scenario
-→ Equipment Selection
+→ Verified Equipment Data
 → HelioCalc Calculation
 → Engineering Findings
+→ Structural / Grid constraints as applicable
 → Physical Drawing Authoring / Engineering Outputs
 → Design Review
 → Approved Design Revision
 → BOM
 → Procurement
+→ Commissioning
 ```
 
 Manufacturer datasheets and structured technical-data revisions are intended to become engineering source data rather than decorative file attachments. Calculated values such as array capacity, string voltage, MPPT compatibility, DC/AC ratio, cable sizing, BESS sizing and time-series performance should move into the Python engine as each domain becomes authoritative.
@@ -92,6 +95,68 @@ Engineering results are classified so the product does not confuse different kin
 A calculation domain does not become production-authoritative merely because it returns plausible numbers. It requires controlled source/unit handling, independent benchmark cases, boundary and invalid-configuration tests, regression tests, explicit numerical tolerances, machine-readable findings, stale-state propagation and engineering validation for its intended scope.
 
 HelioCoreOS also reconciles engineering across workspaces. Drawing revisions are checked against the active Engineering Scenario; approved BOMs derive from the approved Engineering Revision; and commissioning evidence can be compared with design intent without destructively changing historical approved revisions.
+
+## Test and benchmark architecture
+
+The governing test programme is documented in [Test and Validation Strategy](./docs/TEST-VALIDATION-STRATEGY.md).
+
+Testing is deliberately layered:
+
+```text
+Static checks
+→ Unit tests
+→ Known-answer engineering fixtures
+→ Boundary / invalid-configuration tests
+→ Regression tests
+→ Integration tests
+→ Cross-system reconciliation tests
+→ End-to-end governed workflow tests
+→ Independent engineering validation
+```
+
+The first HelioCalc test boundary is reserved under [`services/heliocalc/tests`](./services/heliocalc/tests/README.md), and [`services/heliocalc/pyproject.toml`](./services/heliocalc/pyproject.toml) establishes the initial Python validation toolchain.
+
+A test suite proves only its declared scope. Passing software tests must never be presented as universal engineering validation.
+
+## Equipment data verification
+
+Manufacturer evidence becomes machine-readable engineering source data through the governed workflow in [Equipment Data Verification](./docs/EQUIPMENT-DATA-VERIFICATION.md).
+
+The canonical pipeline is:
+
+```text
+Source received
+→ Document registered
+→ Values extracted/entered
+→ Units normalised
+→ Required fields checked
+→ Independent verification
+→ Released equipment-data revision
+→ HelioCalc use
+→ Supersession when evidence changes
+```
+
+AI-assisted or automated extraction may accelerate entry but cannot self-approve technical data. Historical calculations retain the exact released equipment-data revision they used.
+
+## Structural engineering boundary
+
+The responsibility boundary is defined in [Structural Engineering Boundary](./docs/STRUCTURAL-ENGINEERING-BOUNDARY.md).
+
+SketchUp/Skelion can prove physical arrangement, but a drawable layout is not automatically structurally adequate.
+
+HelioCoreOS governs structural inputs, evidence, review state and dependencies on the active Scenario/drawing revision. Roof capacity, wind/uplift, anchors, ballast, foundations and similar structural claims require separately validated calculation capability and/or appropriate professional evidence before the system may represent them as accepted.
+
+> **SketchUp proves arrangement. Structural evidence proves adequacy. HelioCoreOS governs the relationship between the two.**
+
+## Grid and interconnection architecture
+
+Grid/interconnection is defined as a governed technical workflow in [Grid and Interconnection Architecture](./docs/GRID-INTERCONNECTION-ARCHITECTURE.md).
+
+The Grid Connection record may govern network/utility identity, connection point, voltage/phase, import/export limits, zero-export requirements, metering, protection, application status, approval conditions and active rule-profile revision.
+
+Country/utility requirements must be represented through versioned rule profiles instead of undocumented constants spread across UI or calculation code.
+
+A changed grid approval or export limit may make an Engineering Scenario stale; it must never silently rewrite the approved design.
 
 ## Drawing authoring architecture
 
@@ -150,6 +215,14 @@ Draft
 `Approved` and `Issued` are deliberately separate states. Approved or issued revisions are immutable; later corrections create a new governed revision rather than overwriting history.
 
 The existing `documents` table and basic `draft / in_review / approved / superseded` states remain the launch spine until a dedicated Document Suite schema migration is designed and tested.
+
+## Repository and environment hygiene
+
+Local environment files must never be tracked.
+
+`.gitignore` ignores `.env*` except `.env.example`. The previously tracked `.env.local` has been removed from this branch; developers should recreate it locally from `.env.example`.
+
+Public/publishable client configuration belongs in local/deployment environment configuration; private service-role keys, database passwords and privileged credentials must never be committed.
 
 ## Local setup
 
@@ -216,13 +289,16 @@ Customer and Site may be assigned after the Opportunity is created. They are not
 - governed document templates and data-bound generation;
 - document review, Changes Requested, approval, issue and supersession workflows;
 - configurable approval routes;
+- governed equipment source/verification/release workflow;
 - HelioCalc equipment-data and datasheet foundation;
 - engineering source-quality and unit governance;
-- independent benchmark/known-answer packs for authoritative calculation domains;
+- executable test harness and independent benchmark/known-answer packs;
 - Python Solar PV electrical calculation core;
 - BESS sizing and time-series simulation;
 - governed engineering scenario comparison and design approval;
 - calculation provenance, fingerprints and stale-state propagation;
+- structural evidence/readiness workflow;
+- Grid Connection record, interconnection workflow and versioned rule profiles;
 - Drawing Workspace and governed Drawing Job model;
 - SketchUp/Skelion/LayOut controlled authoring handoff;
 - engineering-to-drawing reconciliation and mismatch findings;
