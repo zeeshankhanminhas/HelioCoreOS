@@ -1,66 +1,116 @@
-# HelioCalc service boundary
+# HelioCalc Service Boundary
 
-This directory is reserved for the Python engineering service defined in [`docs/HELIOCALC-ENGINE.md`](../../docs/HELIOCALC-ENGINE.md).
+HelioCalc is the planned Python/FastAPI engineering calculation service beneath HelioCoreOS.
 
-The engineering experience that consumes this service is governed by [`docs/HELIOCALC-UX.md`](../../docs/HELIOCALC-UX.md).
+HelioCoreOS remains responsible for authentication, tenancy, workflow, persistence, approvals, revisions and audit history. HelioCalc is responsible for deterministic Solar PV, BESS and electrical calculations using governed inputs and released equipment-data revisions.
 
-HelioCalc is not a replacement for the HelioCoreOS application. It is the deterministic calculation authority used by the Engineering domain.
+Governing architecture:
 
-The Python service owns calculation truth; HelioCoreOS owns the engineering cockpit, workflow context, evidence presentation, review and approval experience.
+- [`docs/HELIOCALC-ENGINE.md`](../../docs/HELIOCALC-ENGINE.md)
+- [`docs/ENGINEERING-ACCURACY-VALIDATION.md`](../../docs/ENGINEERING-ACCURACY-VALIDATION.md)
+- [`docs/TEST-VALIDATION-STRATEGY.md`](../../docs/TEST-VALIDATION-STRATEGY.md)
+- [`docs/EQUIPMENT-DATA-VERIFICATION.md`](../../docs/EQUIPMENT-DATA-VERIFICATION.md)
+- [`docs/STRUCTURAL-ENGINEERING-BOUNDARY.md`](../../docs/STRUCTURAL-ENGINEERING-BOUNDARY.md)
+- [`docs/GRID-INTERCONNECTION-ARCHITECTURE.md`](../../docs/GRID-INTERCONNECTION-ARCHITECTURE.md)
 
-## Intended responsibilities
-
-- equipment technical-data models;
-- Solar PV sizing and electrical validation;
-- string and MPPT checks;
-- inverter sizing and DC/AC ratio;
-- cable and voltage-drop calculations;
-- BESS sizing and dispatch;
-- time-series energy simulation;
-- engineering guardrails;
-- reproducible calculation revisions;
-- structured API responses for HelioCoreOS.
-
-## Intended runtime
+## Runtime boundary
 
 ```text
-Python
-FastAPI
-Pydantic models
-scientific calculation modules
-unit and regression tests
+HelioCoreOS web application
+Next.js / TypeScript
+        ↓
+Governed Engineering Scenario
+        ↓
+Authenticated server-side request
+        ↓
+HelioCalc
+Python / FastAPI
+        ↓
+PV / Electrical / BESS / Simulation / Validation
+        ↓
+Structured Calculation Result + Findings + Provenance
+        ↓
+Supabase Calculation Revision + Audit Event
 ```
 
-Scientific libraries may include NumPy, Pandas, SciPy and pvlib where their use is justified and validated.
-
-## Boundary rules
-
-1. No user-interface code belongs in this service.
-2. No HelioCoreOS workflow state is owned exclusively by this service.
-3. Every calculation request must carry governed scenario/revision context.
-4. Equipment technical values must resolve to controlled equipment-data revisions.
-5. Results must be structured and versioned; presentation belongs to HelioCoreOS.
-6. Blocking engineering findings must be machine-readable.
-7. Identical governed inputs and engine/rule versions must produce reproducible results within defined numerical tolerances.
-8. Historical approved results must remain reproducible after later engine or datasheet changes.
-9. The service must fail explicitly when required technical data is missing or contradictory.
-10. Procurement pricing must not alter calculation truth.
+The browser must not hold privileged service credentials.
 
 ## Planned package shape
 
 ```text
-services/heliocalc/
-├── app/
-│   ├── api/
-│   ├── models/
-│   ├── equipment/
-│   ├── pv/
-│   ├── electrical/
-│   ├── bess/
-│   ├── simulation/
-│   ├── economics/
-│   └── validation/
-└── tests/
+heliocalc/
+├── api/
+├── models/
+├── equipment/
+├── pv/
+├── electrical/
+├── bess/
+├── simulation/
+├── economics/
+└── validation/
 ```
 
-The first implementation milestone is the equipment-data foundation followed by the PV electrical core. The UI programme begins in parallel with the Engineering Cockpit shell so technical capability never grows into an unstructured long form. Production calculation code should not be added until the input/output contract and reference calculation cases are defined.
+The initial validation scaffold is reserved under [`tests/`](./tests/README.md). [`pyproject.toml`](./pyproject.toml) establishes the first pytest/coverage/Ruff toolchain boundary.
+
+## Calculation authority
+
+A calculation domain is not authoritative merely because implementation exists.
+
+Domains progress through:
+
+```text
+DEVELOPMENT
+→ BENCHMARKING
+→ VALIDATED_FOR_LIMITED_SCOPE
+→ VALIDATED
+→ RETIRED
+```
+
+Promotion requires the test/benchmark and engineering evidence defined by the validation strategy.
+
+## Source data
+
+Authoritative calculations use released equipment-data revisions, not free-text model names or unverified extracted values.
+
+The equipment-data pipeline is:
+
+```text
+Manufacturer evidence
+→ extraction/entry
+→ unit normalisation
+→ verification
+→ released data revision
+→ HelioCalc
+```
+
+Historical calculations retain the exact source/data revisions they used.
+
+## Non-goals
+
+HelioCalc does not own:
+
+- Customer, Site or Project workflow;
+- approvals or document issue;
+- physical 3D drawing authoring;
+- procurement substitutions;
+- structural adequacy unless a separately validated structural calculation domain is explicitly introduced;
+- grid/authority approval state.
+
+Those remain governed by HelioCoreOS and its project workflows.
+
+## First implementation target
+
+The first serious vertical slice should prove:
+
+```text
+Released PV module + inverter data
+→ Engineering Scenario
+→ array/string/MPPT calculation
+→ margin + machine-readable finding
+→ persisted calculation revision
+→ Drawing Job reconciliation
+→ Review/Approval gate
+→ controlled engineering output
+```
+
+That slice should be benchmarked before broader HelioCalc domains are added.
