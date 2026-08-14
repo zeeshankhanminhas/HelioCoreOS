@@ -71,6 +71,28 @@ Manufacturer datasheets and structured technical-data revisions are intended to 
 
 The repository reserves [`services/heliocalc`](./services/heliocalc/README.md) for this service boundary.
 
+## Engineering accuracy and validation
+
+HelioCoreOS treats accuracy as a governed engineering system rather than a final-stage manual check or a generic `Accuracy %` badge.
+
+The governing framework is documented in [Engineering Accuracy and Validation](./docs/ENGINEERING-ACCURACY-VALIDATION.md).
+
+The core rule is:
+
+> **No engineering number without source, unit, calculation version and reproducible input set. No approved engineering result without validation, freshness and traceable evidence.**
+
+Engineering results are classified so the product does not confuse different kinds of evidence:
+
+- **deterministic** — reproducible calculations such as capacity, voltage, current, DC/AC ratio and voltage drop;
+- **modelled** — weather/load/model-dependent outputs such as annual generation, shading, BESS dispatch and self-consumption;
+- **measured** — survey, test and commissioning observations;
+- **declared/manufacturer** — controlled technical values from identified source revisions;
+- **assumed/estimated** — explicitly non-authoritative inputs requiring visible qualification.
+
+A calculation domain does not become production-authoritative merely because it returns plausible numbers. It requires controlled source/unit handling, independent benchmark cases, boundary and invalid-configuration tests, regression tests, explicit numerical tolerances, machine-readable findings, stale-state propagation and engineering validation for its intended scope.
+
+HelioCoreOS also reconciles engineering across workspaces. Drawing revisions are checked against the active Engineering Scenario; approved BOMs derive from the approved Engineering Revision; and commissioning evidence can be compared with design intent without destructively changing historical approved revisions.
+
 ## Drawing authoring architecture
 
 HelioCoreOS does not attempt to become a CAD or 3D modelling product.
@@ -195,15 +217,19 @@ Customer and Site may be assigned after the Opportunity is created. They are not
 - document review, Changes Requested, approval, issue and supersession workflows;
 - configurable approval routes;
 - HelioCalc equipment-data and datasheet foundation;
+- engineering source-quality and unit governance;
+- independent benchmark/known-answer packs for authoritative calculation domains;
 - Python Solar PV electrical calculation core;
 - BESS sizing and time-series simulation;
 - governed engineering scenario comparison and design approval;
+- calculation provenance, fingerprints and stale-state propagation;
 - Drawing Workspace and governed Drawing Job model;
 - SketchUp/Skelion/LayOut controlled authoring handoff;
 - engineering-to-drawing reconciliation and mismatch findings;
 - optional HelioCoreOS SketchUp Connector after the manual handoff workflow is proven;
-- approved-design-driven BOM generation;
+- approved-design-driven BOM generation and reconciliation;
 - procurement, installation, quality, and commissioning control;
+- design-versus-commissioning evidence comparison;
 - governed commissioning and handover document packs;
 - operations and maintenance.
 
