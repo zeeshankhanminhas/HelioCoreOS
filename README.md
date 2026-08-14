@@ -69,6 +69,34 @@ Manufacturer datasheets and structured technical-data revisions are intended to 
 
 The repository reserves [`services/heliocalc`](./services/heliocalc/README.md) for this service boundary.
 
+## Document Suite architecture
+
+HelioCoreOS treats documents as governed business objects rather than unmanaged file attachments.
+
+The governing Document Suite architecture is documented in [Document Suite Architecture](./docs/DOCUMENT-SUITE-ARCHITECTURE.md).
+
+The product uses a dual-context document model:
+
+- **workflow context** — documents are created, reviewed, approved and used inside the Opportunity, Project, Engineering, Procurement, Installation, Commissioning or Handover workflow that owns them;
+- **Documents Registry** — the global Documents module provides cross-record search, revision control, issue status, expiry monitoring, audit and controlled retrieval without duplicating the underlying workflow.
+
+The target document lifecycle is:
+
+```text
+Draft
+→ Review
+→ Changes Requested
+→ Revised Draft
+→ Approved
+→ Issued
+→ Superseded
+→ Archived
+```
+
+`Approved` and `Issued` are deliberately separate states. Approved or issued revisions are immutable; later corrections create a new governed revision rather than overwriting history.
+
+The existing `documents` table and basic `draft / in_review / approved / superseded` states remain the launch spine until a dedicated Document Suite schema migration is designed and tested.
+
 ## Local setup
 
 1. Copy `.env.example` to `.env.local`.
@@ -130,7 +158,9 @@ Customer and Site may be assigned after the Opportunity is created. They are not
 - detailed quotation;
 - contract acceptance;
 - project conversion;
-- document generation and revision management;
+- Document Suite registry and revision foundation;
+- governed document templates and data-bound generation;
+- document review, Changes Requested, approval, issue and supersession workflows;
 - configurable approval routes;
 - HelioCalc equipment-data and datasheet foundation;
 - Python Solar PV electrical calculation core;
@@ -138,7 +168,7 @@ Customer and Site may be assigned after the Opportunity is created. They are not
 - governed engineering scenario comparison and design approval;
 - approved-design-driven BOM generation;
 - procurement, installation, quality, and commissioning control;
-- handover packs;
+- governed commissioning and handover document packs;
 - operations and maintenance.
 
 These remain project additions and must reference the protected core rather than modifying it implicitly.
