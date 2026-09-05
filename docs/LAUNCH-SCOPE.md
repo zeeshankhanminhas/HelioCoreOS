@@ -1,20 +1,32 @@
-# HelioCoreOS launch scope
+# HelioCoreOS Solar EPC Launch Scope
 
-> Governing reference: [HelioCoreOS Constitution](./CONSTITUTION.md)  
-> UI reference: [UI Component Strategy](./UI-COMPONENT-STRATEGY.md)  
-> Project profile: HelioCoreOS Solar EPC  
-> Change classification: Project Extension  
-> Core references: CORE-CTX-001, CORE-NAV-001, CORE-DATA-001, CORE-STATE-001, CORE-DOC-001, CORE-APP-001, CORE-AUDIT-001, CORE-FAIL-001, CORE-UX-001
+Status: Protected Project Profile  
+Parent governance: [HelioCoreOS Constitution](./CONSTITUTION.md)
 
-## Product promise
+## 1. Purpose
 
-HelioCoreOS launches as the smallest complete and governed commercial foundation for a Solar EPC workflow. It must allow a subscribed organisation to control access, capture and qualify demand, assign customer and site context progressively, assess readiness, and prepare an indicative proposal without introducing later delivery complexity prematurely.
+This document defines the Solar EPC launch profile for HelioCoreOS.
 
-The launch scope extends the Constitution. It does not redefine the protected core.
+It does not replace the Constitution. It narrows the protected core into an executable Solar EPC delivery sequence and prevents premature expansion into unproven modules.
 
-## Reference lifecycle
+## 2. Launch principle
 
-The complete Solar EPC lifecycle is:
+HelioCoreOS launches through proven vertical slices, not through a wide collection of incomplete modules.
+
+A capability must not appear production-ready merely because its page, schema or calculation exists.
+
+The launch programme prioritises:
+
+1. governed commercial intake;
+2. traceable Site and Survey evidence;
+3. validated Engineering Scenario workflow;
+4. controlled documents and approvals;
+5. design-to-drawing/BOM reconciliation;
+6. delivery and commissioning evidence.
+
+## 3. Commercial launch path
+
+The required commercial launch path is:
 
 ```text
 Enquiry / Lead
@@ -23,174 +35,183 @@ Enquiry / Lead
 → Site assignment
 → Customer Readiness
 → Indicative Proposal
-→ Detailed Quote
-→ Contract
-→ Project Creation
-→ Engineering
-→ Procurement
-→ Installation
-→ Testing and Commissioning
-→ Handover
-→ Operations and Maintenance
 ```
 
-Customer and Site are flexible relationships. They may be assigned after an Opportunity is created, but later workflow gates may require them before progression.
+Customer and Site may be assigned after Opportunity creation. Both are required before an indicative proposal is issued.
 
-![HelioCoreOS operating system blueprint](./assets/heliocoreos-os-blueprint-v1.svg)
+The commercial slice must be proven before downstream engineering breadth becomes the primary delivery focus.
 
-## Launch V1 boundary
+## 4. Engineering launch path
 
-Launch V1 is the commercial foundation only.
-
-It includes:
-
-1. organisation authentication and tenant isolation;
-2. four fixed roles: Owner, Admin, Manager and Member;
-3. simple teams and access visibility;
-4. Opportunity creation and register;
-5. Customer register and optional Opportunity assignment;
-6. Site register and optional Opportunity assignment;
-7. Customer Readiness and evidence tracking;
-8. Indicative Proposal creation and governed lifecycle management;
-9. activity history and audit visibility;
-10. consistent breadcrumbs, parent paths and contextual actions;
-11. foundational document metadata, states and approval references required by implemented workflows;
-12. selective use of accessible UI primitives without surrendering the HelioCoreOS visual or operating hierarchy.
-
-An Opportunity must be creatable without a Customer or Site. Only the minimum information required for commercial capture should be mandatory at intake.
-
-## Launch navigation
-
-Only operational destinations should appear as normal live navigation.
+The target engineering path is:
 
 ```text
-Command
-- Overview
-- Tasks
-
-Sales
-- Opportunities
-- Customers
-- Sites
-
-Delivery
-- Projects
-
-Administration
-- Team & Access
-- Settings
+Approved Site Survey
+→ Engineering Scenario
+→ Released Equipment Data
+→ HelioCalc Calculation
+→ Engineering Findings / Margins
+→ Structural / Grid evidence as applicable
+→ Drawing Job / Engineering Outputs
+→ Reconciliation
+→ Engineering Review
+→ Approved Design Revision
+→ BOM
 ```
 
-A future or incomplete destination must be hidden or clearly marked as planned. It must not appear to be a working operational module.
+The first implementation should prove one narrow, high-confidence Solar PV path rather than attempting every PV/BESS/electrical function at once.
 
-## Platform foundation
+## 5. Authority gates
 
-The launch platform supports:
+### 5.1 Equipment data gate
 
-- one organisation boundary per workspace;
-- Supabase Row Level Security for tenant isolation;
-- four fixed roles;
-- simple teams;
-- active, invited and suspended user states;
-- manually governed subscription plan, status, currency and user limit;
-- universal page context and navigation rules;
-- universal state references;
-- governed document and approval foundations;
-- activity and audit history;
-- explicit error handling and partial-failure detection.
+A manufacturer datasheet attachment alone does not make its extracted values authoritative.
 
-The launch does not include custom roles, granular permission builders, automated payment collection, multi-office hierarchy, SSO or white labelling.
+Authoritative HelioCalc inputs require the governed source/normalisation/verification/release workflow defined in [Equipment Data Verification](./EQUIPMENT-DATA-VERIFICATION.md).
 
-## UI implementation boundary
+### 5.2 Calculation gate
 
-Tailwind CSS is the launch styling foundation. shadcn/ui may be introduced selectively for interaction primitives such as dialogs, drawers, menus, popovers, comboboxes, date controls, tabs, notifications, skeletons and progress indicators.
+A calculation domain must satisfy the evidence and test requirements in:
 
-The workspace shell, navigation, breadcrumbs, record hierarchy, lifecycle controls, operational summaries, workflow gates, audit surfaces and Solar EPC workspaces remain custom HelioCoreOS components.
+- [Engineering Accuracy and Validation](./ENGINEERING-ACCURACY-VALIDATION.md)
+- [Test and Validation Strategy](./TEST-VALIDATION-STRATEGY.md)
 
-Launch UI work must preserve:
+A domain may be implemented but remain `DEVELOPMENT` or `BENCHMARKING` and therefore not be used as production engineering authority.
 
-- Apple-like simplicity;
-- The Ordinary-like clarity;
-- enterprise governance;
-- Solar EPC and industrial precision;
-- accessible keyboard and screen-reader behaviour;
-- explicit loading, empty, error, disabled and destructive states;
-- restrained decoration with no generic SaaS visual language.
+### 5.3 Structural gate
 
-Introducing shadcn/ui does not authorise a wholesale redesign or unnecessary replacement of stable custom components.
+Physical placement in SketchUp/Skelion is not structural approval.
 
-## Future project additions
+Projects that require structural evidence must satisfy the workflow defined in [Structural Engineering Boundary](./STRUCTURAL-ENGINEERING-BOUNDARY.md) before configured downstream gates may pass.
 
-The following remain outside Launch V1 until the core commercial workflow is proven with real users:
+### 5.4 Grid/interconnection gate
 
-- detailed technical and commercial quote;
-- contract execution;
-- automatic Opportunity-to-Project conversion;
-- full survey workflow;
-- engineering calculation engines;
-- approved BOM;
-- supplier pricing;
-- procurement and inventory;
-- vendor and subcontractor portals;
-- civil and roof-access work packages;
-- installation management;
-- quality management;
-- testing and commissioning;
-- handover packs;
-- O&M and asset management;
-- net-metering automation;
-- customer and supplier portals;
-- public APIs and bespoke integrations;
-- advanced reporting and analytics;
-- automated recurring billing.
+Grid approval, export constraints, protection/metering requirements and commissioning conditions are governed through [Grid and Interconnection Architecture](./GRID-INTERCONNECTION-ARCHITECTURE.md).
 
-These are separate Project Additions. Each must reference the Core Constitution and define its own lifecycle, states, documents, approvals, permissions, audit behaviour and failure handling.
+A changed network/utility condition may invalidate or stale an Engineering Scenario.
 
-## Launch readiness test
+### 5.5 Drawing/BOM gate
 
-A release is launch-ready only when a new organisation can:
+A drawing or BOM must not silently diverge from the approved Engineering Scenario.
 
-1. authenticate and see only its own records;
-2. see its subscription and available seats;
-3. see its users, roles, statuses and teams;
-4. understand its current location on every operational page;
-5. navigate back to the correct parent context;
-6. create an Opportunity without first creating a Customer or Site;
-7. assign or create a Customer later;
-8. assign or create a Site later;
-9. request and validate the minimum Customer Readiness evidence;
-10. create and manage an Indicative Proposal;
-11. see clear object and document states;
-12. see approval requirements where applicable;
-13. recover visibly from failed or partially completed actions;
-14. review the resulting activity and audit history;
-15. operate all interactive components by keyboard with clear focus and state feedback.
+Reconciliation differences create findings and must be resolved or governed before approval/issue.
 
-## Diagnostic and build gate
+## 6. Drawing authoring scope
 
-Before a launch capability is considered complete, it must pass:
+HelioCoreOS does not build a browser CAD/3D modeller for launch.
 
-- route inventory;
-- breadcrumb and back-path review;
-- contextual action review;
-- role and tenant isolation review;
-- required versus optional field review;
-- empty, loading, error and not-found states;
-- state-transition validation;
-- document and approval behaviour where applicable;
-- partial-failure and recovery review;
-- activity and audit review;
-- accessibility and keyboard review for adopted UI primitives;
-- desktop and mobile visual consistency review;
-- `npm run lint`;
-- `npm run typecheck`;
-- `npm run build`;
-- end-to-end workflow testing.
+Supported external authoring stack:
 
-## Complexity rule
+```text
+SketchUp
++ Skelion
++ SketchUp LayOut
+```
 
-No deferred module enters the launch scope unless the current end-to-end commercial workflow cannot be completed correctly without it.
+HelioCoreOS owns Drawing Jobs, revision state, review, approval and document control.
 
-No dependency or UI component enters the launch branch without a demonstrated workflow, accessibility, consistency or maintenance benefit.
+The initial integration is controlled file handoff. A SketchUp Connector is optional after that workflow is proven.
 
-No Project Addition may alter or bypass a constitutional core rule. Any change to a core rule requires a formal constitutional amendment before implementation.
+See [Drawing Authoring Integration](./DRAWING-AUTHORING-INTEGRATION.md).
+
+## 7. Document scope
+
+The initial `documents` table remains a launch spine rather than the final Document Suite.
+
+The target governed lifecycle is:
+
+```text
+Draft
+→ Review
+→ Changes Requested
+→ Revised Draft
+→ Approved
+→ Issued
+→ Superseded
+→ Archived
+```
+
+Documents are created and operated where the work happens; the global Documents Registry provides cross-record governance and retrieval.
+
+See [Document Suite Architecture](./DOCUMENT-SUITE-ARCHITECTURE.md).
+
+## 8. First serious engineering vertical slice
+
+The recommended first end-to-end slice is:
+
+```text
+Verified/released PV module + inverter revisions
+→ Approved Site Survey/design basis
+→ Engineering Scenario
+→ array capacity + cold Voc + hot Vmp + MPPT/current + DC/AC checks
+→ machine-readable findings and margins
+→ calculation revision persisted with provenance
+→ Drawing Job prepared
+→ SketchUp/Skelion layout revision published
+→ module/equipment/capacity reconciliation
+→ Review
+→ Approved design revision
+→ controlled drawing/calculation output
+```
+
+This slice is intentionally narrower than the final product but deep enough to prove the operating model.
+
+## 9. Deferred engineering breadth
+
+Do not delay the first validated slice in order to fully implement:
+
+- advanced BESS degradation;
+- every tariff/economic model;
+- full structural calculation engine;
+- every grid/utility rule profile;
+- automated SketchUp connector;
+- sophisticated 3D browser viewer;
+- complete procurement/warehouse system;
+- O&M analytics;
+- every possible document pack.
+
+These may follow once their parent workflow is proven.
+
+## 10. Quality gates
+
+A release candidate must satisfy the applicable gates for its implemented scope:
+
+```text
+Application
+lint → typecheck → build → relevant tests
+
+Engineering
+controlled inputs → benchmark evidence → regression tests → findings → provenance
+
+Workflow
+persistence → audit → allowed transition → stale-state propagation
+
+Cross-system
+Scenario ↔ Calculation ↔ Drawing ↔ BOM ↔ Document
+
+Security
+no private credentials/local environment files committed; tenant/RLS assumptions verified
+```
+
+A failed engineering benchmark or unresolved blocking finding must not be overridden by a green UI build.
+
+## 11. Scope discipline
+
+The architecture is considered sufficiently defined to begin implementation when the current protected supplements cover:
+
+- Information Architecture;
+- enterprise floorplans and interaction surfaces;
+- HelioCalc engine and cockpit;
+- engineering accuracy/validation;
+- testing strategy;
+- equipment-data verification;
+- structural responsibility boundary;
+- grid/interconnection;
+- drawing authoring;
+- Document Suite.
+
+Further architecture should be added only when implementation exposes a genuine missing decision.
+
+## 12. Launch decision
+
+> **From this point, implementation depth has priority over architectural breadth. Prove the governed engineering vertical slice before expanding the system.**
