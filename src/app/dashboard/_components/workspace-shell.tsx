@@ -61,12 +61,12 @@ function buildBreadcrumbs(pathname: string): Crumb[] {
   const moduleName = segments[1];
   const crumbs: Crumb[] = [{ href: "/dashboard", label: "Dashboard" }];
 
-  if (moduleName && sectionLabels[moduleName]) crumbs.push({ href: `/dashboard/${moduleName}`, label: sectionLabels[moduleName] });
+  if (moduleName && sectionLabels[moduleName]) crumbs.push({ href: "/dashboard", label: sectionLabels[moduleName] });
 
   let path = "";
-  segments.forEach((segment, index) => {
+  segments.forEach((segment) => {
     path += `/${segment}`;
-    if (segment === "dashboard" || (index === 1 && sectionLabels[segment])) return;
+    if (segment === "dashboard") return;
     crumbs.push({ href: path, label: readableSegment(segment) });
   });
 
@@ -78,27 +78,31 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <nav className="space-y-7" aria-label="Primary navigation">
-      {navigation.map((group) => (
-        <section key={group.label}>
-          <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{group.label}</p>
-          <div className="space-y-1">
-            {group.items.map((item) => {
-              const active = item.href === "/dashboard" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  onClick={onNavigate}
-                  aria-current={active ? "page" : undefined}
-                  className={`block border-l-2 px-3 py-2.5 text-sm transition-colors ${focus} ${active ? "border-[var(--accent)] bg-white/55 font-medium text-[var(--foreground)]" : "border-transparent text-[var(--muted)] hover:bg-white/40 hover:text-[var(--foreground)]"}`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      {navigation.map((group) => {
+        const matches = group.items.filter((item) => item.href === "/dashboard" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
+        const activeHref = matches.sort((a, b) => b.href.length - a.href.length)[0]?.href;
+        return (
+          <section key={group.label}>
+            <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{group.label}</p>
+            <div className="space-y-1">
+              {group.items.map((item) => {
+                const active = item.href === activeHref;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    aria-current={active ? "page" : undefined}
+                    className={`block border-l-2 px-3 py-2.5 text-sm transition-colors ${focus} ${active ? "border-[var(--accent)] bg-white/55 font-medium text-[var(--foreground)]" : "border-transparent text-[var(--muted)] hover:bg-white/40 hover:text-[var(--foreground)]"}`}
+                  >
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+        );
+      })}
     </nav>
   );
 }
@@ -112,7 +116,7 @@ function PageContext() {
       <nav aria-label="Breadcrumb" className="min-w-0 overflow-x-auto">
         <ol className="flex min-w-max items-center gap-2 text-xs text-[var(--muted)]">
           {crumbs.map((crumb, index) => (
-            <li key={`${crumb.href}-${index}`} className="flex items-center gap-2">
+            <li key={`${crumb.href}-${crumb.label}-${index}`} className="flex items-center gap-2">
               {index ? <span aria-hidden="true">/</span> : null}
               {crumb.current ? (
                 <span aria-current="page" className="font-semibold text-[var(--foreground)]">{crumb.label}</span>
