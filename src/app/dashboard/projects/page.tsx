@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-const stages = ["all", "qualification", "survey", "design", "commercial", "procurement", "installation", "commissioning", "handover", "complete", "on_hold"];
+const stages = ["all", "procurement", "installation", "commissioning", "handover", "complete", "on_hold"];
 const risks = ["all", "green", "amber", "red"];
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
@@ -48,17 +48,17 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
     <div className="mx-auto max-w-[1500px]">
       <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Portfolio control</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Post-contract delivery</p>
           <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">Project register</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">Govern every Solar EPC project from intake through handover, with accountable risk and lifecycle status.</p>
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">Projects begin only after commercial contract sign-off. Qualification, Site, Load Profile, Calculator and Detailed Design stay in the pre-contract Opportunity/Engineering flow.</p>
         </div>
-        <Link href="/dashboard/projects/new" className="inline-flex min-h-10 w-fit items-center justify-center border border-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white">Create project</Link>
+        <div className="w-fit border border-[var(--line)] px-4 py-2.5 text-xs font-semibold text-[var(--muted)]">Project creation · contract-gated</div>
       </header>
 
       <form className="mt-7 grid gap-3 border border-[var(--line)] p-4 md:grid-cols-[minmax(220px,1fr)_190px_160px_auto]" action="/dashboard/projects">
         <input name="q" defaultValue={q} placeholder="Search name or reference" className="min-h-11 border border-[var(--line)] bg-transparent px-3 text-sm outline-none focus:border-[var(--foreground)]" />
         <select name="stage" defaultValue={stage} className="min-h-11 border border-[var(--line)] bg-[var(--background)] px-3 text-sm outline-none">
-          {stages.map((item) => <option key={item} value={item}>{item === "all" ? "All stages" : titleCase(item)}</option>)}
+          {stages.map((item) => <option key={item} value={item}>{item === "all" ? "All delivery stages" : titleCase(item)}</option>)}
         </select>
         <select name="risk" defaultValue={risk} className="min-h-11 border border-[var(--line)] bg-[var(--background)] px-3 text-sm outline-none">
           {risks.map((item) => <option key={item} value={item}>{item === "all" ? "All risk" : titleCase(item)}</option>)}
@@ -69,7 +69,7 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
       <section className="mt-7 border border-[var(--line)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] p-5 md:px-6">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Controlled portfolio</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Delivery portfolio</p>
             <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">{projects?.length ?? 0} projects</h2>
           </div>
           <Link href="/dashboard" className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)]">Executive overview</Link>
@@ -101,8 +101,9 @@ export default async function ProjectsPage({ searchParams }: { searchParams: Sea
           </div>
         ) : (
           <div className="px-6 py-20 text-center">
-            <p className="text-sm font-semibold">No projects match this view</p>
-            <p className="mt-3 text-sm text-[var(--muted)]">Create the first EPC project or clear the current filters.</p>
+            <p className="text-sm font-semibold">No post-contract projects in this view</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">Projects will appear here only after the commercial contract workflow creates them.</p>
+            <Link href="/dashboard/opportunities" className="mt-5 inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Open pre-contract opportunities</Link>
           </div>
         )}
       </section>
