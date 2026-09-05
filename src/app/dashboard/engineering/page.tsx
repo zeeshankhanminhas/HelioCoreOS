@@ -5,7 +5,7 @@ import type { SystemType } from "@/lib/engineering/types";
 import { DesignIntake } from "./_components/design-intake";
 
 type Props = {
-  searchParams: Promise<{ error?: string; created?: string }>;
+  searchParams: Promise<{ error?: string; created?: string; opportunity?: string }>;
 };
 
 function titleCase(value: string) {
@@ -40,7 +40,7 @@ export default async function EngineeringPage({ searchParams }: Props) {
         id: opportunity.id,
         reference: opportunity.reference,
         title: opportunity.title,
-        siteLabel: site ? `${site.name}${site.postcode ? ` · ${site.postcode}` : ""}` : "Assigned site",
+        siteLabel: site ? `${site.name}${site.postcode ? ` · ${site.postcode}` : ""}` : "Assigned Site",
       };
     });
 
@@ -51,16 +51,23 @@ export default async function EngineeringPage({ searchParams }: Props) {
         <div className="mt-3 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <h1 className="text-4xl font-medium tracking-[-0.045em] md:text-5xl">Engineering workspace</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--muted)]">Engineering remains attached to the Opportunity and Site until commercial sign-off. System Type and Load Profile establish the basis, the Calculator sizes the requirement, and detailed Design follows afterwards.</p>
+            <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--muted)]">Engineering stays attached to the Opportunity and Site until commercial sign-off. Build the Load Profile first, size the requirement in Calculator, then move into equipment-led Detailed Design.</p>
           </div>
-          <div className="border border-[var(--line)] px-4 py-3 text-xs leading-5 text-[var(--muted)]"><span className="font-semibold text-[var(--foreground)]">Flow:</span> Opportunity → Site → System Type → Load Profile → Calculator → Design → Proposal → Contract → Project</div>
+          <Link href="/dashboard/engineering/equipment" className="inline-flex min-h-11 w-fit items-center justify-center border border-[var(--line)] px-4 text-xs font-semibold hover:border-[var(--foreground)]">Equipment library</Link>
+        </div>
+        <div className="mt-5 overflow-x-auto border border-[var(--line)]">
+          <ol className="flex min-w-max divide-x divide-[var(--line)] text-xs">
+            {["Opportunity + Site", "System Type", "Load Profile", "Calculator", "Equipment", "Detailed Design", "PVWatts", "SLD + BOM", "Review", "Proposal / Contract", "Project"].map((item, index) => (
+              <li key={item} className={`px-4 py-3 ${item === "Project" ? "text-[var(--muted)]" : ""}`}><span className="mr-2 tabular-nums text-[var(--muted)]">{String(index + 1).padStart(2, "0")}</span><span className="font-semibold">{item}</span></li>
+            ))}
+          </ol>
         </div>
       </header>
 
       {messages.error ? <div className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{messages.error}</div> : null}
-      {messages.created ? <div className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Engineering intake and linked Load Profile draft created successfully.</div> : null}
+      {messages.created ? <div className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Engineering Intake and linked Load Profile draft created successfully.</div> : null}
 
-      <div className="mt-7"><DesignIntake opportunities={opportunityOptions} /></div>
+      <div className="mt-7"><DesignIntake opportunities={opportunityOptions} initialOpportunityId={messages.opportunity} /></div>
 
       <section className="mt-7 border border-[var(--line)]">
         <div className="flex items-end justify-between gap-4 border-b border-[var(--line)] p-5 md:px-6">
@@ -75,7 +82,7 @@ export default async function EngineeringPage({ searchParams }: Props) {
               const destination = intake.status === "ready" ? `/dashboard/engineering/calculators/${intake.id}` : intake.load_profile_id ? `/dashboard/engineering/load-profiles/${intake.load_profile_id}` : null;
               const content = (
                 <article className="grid gap-3 p-5 md:grid-cols-[minmax(0,1.5fr)_140px_minmax(0,1fr)_170px_120px] md:items-center md:px-6">
-                  <div><p className="text-sm font-semibold">{opportunity?.reference ?? "Engineering intake"}</p><p className="mt-1 truncate text-xs text-[var(--muted)]">{opportunity?.title ?? intake.id}</p></div>
+                  <div><p className="text-sm font-semibold">{opportunity?.reference ?? "Engineering Intake"}</p><p className="mt-1 truncate text-xs text-[var(--muted)]">{opportunity?.title ?? intake.id}</p></div>
                   <p className="text-xs font-semibold">{systemTypeLabels[intake.system_type as SystemType] ?? titleCase(intake.system_type)}</p>
                   <p className="text-xs text-[var(--muted)]">{titleCase(intake.design_objective)}</p>
                   <p className={`text-xs font-semibold ${intake.status === "ready" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>{intake.status !== "ready" ? "Complete Load Profile" : calculation ? `Calculator · Rev ${calculation.revision}` : "Open Calculator"}</p>
