@@ -74,3 +74,51 @@ export type EngineeringValidation = {
   title: string;
   detail: string;
 };
+
+export type EquipmentStatus = "draft" | "approved" | "retired";
+export type InverterType = "grid_tied" | "off_grid" | "hybrid" | "pcs";
+export type ElectricalPhase = "single" | "three";
+export type ModuleTechnology = "mono" | "topcon" | "hjt" | "thin_film" | "other";
+export type BatteryChemistry = "lfp" | "nmc" | "lead_acid" | "other";
+export type CompatibilityStatus = "approved" | "conditional" | "not_compatible";
+
+export type PvModuleSpec = {
+  pmaxW: number;
+  vocV: number;
+  vmpV: number;
+  iscA: number;
+  impA: number;
+  tempCoeffVocPctC?: number | null;
+  maxSystemVoltageV?: number | null;
+  datasheetUrl?: string | null;
+};
+
+export type InverterSpec = {
+  inverterType: InverterType;
+  ratedAcPowerKw: number;
+  maxPvInputPowerKw?: number | null;
+  maxDcVoltageV: number;
+  mpptMinV: number;
+  mpptMaxV: number;
+  mpptCount: number;
+  maxInputCurrentPerMpptA: number;
+  maxShortCircuitCurrentPerMpptA: number;
+  batteryVoltageMinV?: number | null;
+  batteryVoltageMaxV?: number | null;
+  maxChargePowerKw?: number | null;
+  maxDischargePowerKw?: number | null;
+  datasheetUrl?: string | null;
+};
+
+export type BatterySpec = {
+  nominalCapacityKwh: number;
+  usableCapacityKwh: number;
+  nominalVoltageV: number;
+  operatingVoltageMinV?: number | null;
+  operatingVoltageMaxV?: number | null;
+  maxChargePowerKw: number;
+  maxDischargePowerKw: number;
+  maxDodPct?: number | null;
+  roundTripEfficiencyPct?: number | null;
+  datasheetUrl?: string | null;
+};
