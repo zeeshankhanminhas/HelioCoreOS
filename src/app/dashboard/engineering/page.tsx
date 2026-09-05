@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { systemTypeLabels } from "@/lib/engineering/design-rules";
 import type { SystemType } from "@/lib/engineering/types";
@@ -26,7 +27,7 @@ export default async function EngineeringPage({ searchParams }: Props) {
     supabase.from("sites").select("id,name,postcode"),
     supabase
       .from("engineering_intakes")
-      .select("id,opportunity_id,system_type,design_objective,status,created_at")
+      .select("id,opportunity_id,load_profile_id,system_type,design_objective,status,created_at")
       .order("created_at", { ascending: false })
       .limit(8),
   ]);
@@ -79,8 +80,8 @@ export default async function EngineeringPage({ searchParams }: Props) {
           <div className="divide-y divide-[var(--line)]">
             {recentIntakes.map((intake) => {
               const opportunity = opportunityMap.get(intake.opportunity_id);
-              return (
-                <article key={intake.id} className="grid gap-3 p-5 md:grid-cols-[minmax(0,1.5fr)_140px_minmax(0,1fr)_100px_120px] md:items-center md:px-6">
+              const content = (
+                <article className="grid gap-3 p-5 md:grid-cols-[minmax(0,1.5fr)_140px_minmax(0,1fr)_100px_120px] md:items-center md:px-6">
                   <div>
                     <p className="text-sm font-semibold">{opportunity?.reference ?? "Engineering intake"}</p>
                     <p className="mt-1 truncate text-xs text-[var(--muted)]">{opportunity?.title ?? intake.id}</p>
@@ -91,6 +92,7 @@ export default async function EngineeringPage({ searchParams }: Props) {
                   <p className="text-xs tabular-nums text-[var(--muted)] md:text-right">{date.format(new Date(intake.created_at))}</p>
                 </article>
               );
+              return intake.load_profile_id ? <Link key={intake.id} href={`/dashboard/engineering/load-profiles/${intake.load_profile_id}`} className="block hover:bg-white/35">{content}</Link> : <div key={intake.id}>{content}</div>;
             })}
           </div>
         ) : (
