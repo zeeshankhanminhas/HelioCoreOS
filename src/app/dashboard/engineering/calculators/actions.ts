@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { calculateSystemSizing, CALCULATOR_ENGINE_VERSION } from "@/lib/engineering/calculator";
+import { runPreliminarySizing } from "@/lib/engineering/heliocalc-client";
+import type { CalculatorInputs } from "@/lib/engineering/calculator";
 import type { SystemType } from "@/lib/engineering/types";
 
 function text(fd: FormData, key: string) {
@@ -69,7 +70,7 @@ export async function saveCalculatorRevision(fd: FormData) {
       : (await supabase.from("opportunities").select("id,reference,title").eq("id", intake.opportunity_id).eq("organisation_id", organisationId).maybeSingle()).data;
     if (!actualOpportunity) throw new Error("Opportunity context is unavailable.");
 
-    const inputs = {
+    const inputs: CalculatorInputs = {
       systemType: intake.system_type as SystemType,
       annualEnergyKwh: Number(load.annual_energy_kwh ?? 0),
       averageDailyEnergyKwh: Number(load.average_daily_energy_kwh ?? 0),
@@ -87,7 +88,10 @@ export async function saveCalculatorRevision(fd: FormData) {
       inverterHeadroomPct: optionalNumber(fd, "inverter_headroom_pct"),
     };
 
-    const result = calculateSystemSizing(inputs);
+    // The browser TypeScript calculator is preview-only. The saved engineering result
+    // is always recomputed by the Python HelioCalc service.
+    const heliocalc = await runPreliminarySizing(inputs);
+    const result = heliocalc.result;
     const blockers = result.validations.filter((item) => item.severity === "error");
     if (blockers.length) throw new Error(blockers.map((item) => item.title).join(" · "));
 
@@ -110,7 +114,7 @@ export async function saveCalculatorRevision(fd: FormData) {
       revision,
       system_type: intake.system_type,
       status: "draft",
-      engine_version: CALCULATOR_ENGINE_VERSION,
+      engine_version: heliocalc.engineVersion,
       input_snapshot: {
         ...inputs,
         loadProfileId: load.id,
@@ -126,7 +130,7 @@ export async function saveCalculatorRevision(fd: FormData) {
       organisation_id: organisationId,
       actor_id: user.id,
       event_type: "engineering_calculation_saved",
-      description: `${calculationReference} saved as preliminary ${intake.system_type.replaceAll("_", " ")} sizing for ${actualOpportunity.reference}.`,
+      description: `${calculationReference} recomputed by ${heliocalc.engineVersion} and saved as preliminary ${intake.system_type.replaceAll("_", " ")} sizing for ${actualOpportunity.reference}.`,
     });
 
     revalidatePath("/dashboard/engineering");
