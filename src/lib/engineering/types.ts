@@ -14,12 +14,38 @@ export type LoadProfileInterval = {
   category?: string;
 };
 
+export type LoadProfileUtilityBill = {
+  month: string;
+  energyKwh: number;
+  peakDemandKw?: number;
+  costAmount?: number;
+};
+
+export type LoadProfileAppliance = {
+  name: string;
+  category?: string;
+  ratedKw: number;
+  quantity: number;
+  hoursPerDay: number;
+  daysPerWeek: number;
+  simultaneityPct: number;
+  essential: boolean;
+};
+
 export type LoadProfileSummary = {
   annualEnergyKwh: number;
   averageDailyEnergyKwh: number;
   peakDemandKw: number;
   essentialPeakDemandKw: number;
   intervalCount: number;
+  coveredHours?: number;
+};
+
+export type LoadProfileAssessment = {
+  code: string;
+  severity: "pass" | "warning" | "error";
+  title: string;
+  detail: string;
 };
 
 export type DesignObjective =
