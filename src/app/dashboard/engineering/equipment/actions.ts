@@ -34,7 +34,7 @@ function nullableUrl(fd: FormData, key: string) {
   if (!raw) return null;
   try {
     const url = new URL(raw);
-    if (!['http:', 'https:'].includes(url.protocol)) throw new Error();
+    if (!["http:", "https:"].includes(url.protocol)) throw new Error();
     return raw;
   } catch {
     throw new Error(`${key.replaceAll("_", " ")} must be a valid HTTP or HTTPS URL.`);
@@ -206,8 +206,8 @@ export async function createInverter(fd: FormData) {
       status: "draft",
       created_by: user.id,
     };
-    if (!['grid_tied','off_grid','hybrid','pcs'].includes(payload.inverter_type)) throw new Error("Choose a valid inverter type.");
-    if (!['single','three'].includes(payload.phase)) throw new Error("Choose single- or three-phase.");
+    if (!["grid_tied", "off_grid", "hybrid", "pcs"].includes(payload.inverter_type)) throw new Error("Choose a valid inverter type.");
+    if (!["single", "three"].includes(payload.phase)) throw new Error("Choose single- or three-phase.");
     if (!Number.isInteger(payload.mppt_count) || payload.mppt_count <= 0) throw new Error("MPPT count must be a positive whole number.");
     if (payload.mppt_min_v >= payload.mppt_max_v) throw new Error("MPPT minimum voltage must be below maximum voltage.");
     if (payload.mppt_max_v > payload.max_dc_voltage_v) throw new Error("MPPT maximum voltage cannot exceed the inverter maximum DC voltage.");
@@ -252,7 +252,7 @@ export async function createBattery(fd: FormData) {
       status: "draft",
       created_by: user.id,
     };
-    if (!['lfp','nmc','lead_acid','other'].includes(payload.chemistry)) throw new Error("Choose a valid battery chemistry.");
+    if (!["lfp", "nmc", "lead_acid", "other"].includes(payload.chemistry)) throw new Error("Choose a valid battery chemistry.");
     if (payload.operating_voltage_min_v != null && payload.operating_voltage_max_v != null && payload.operating_voltage_min_v >= payload.operating_voltage_max_v) throw new Error("Battery minimum operating voltage must be below maximum voltage.");
     if (payload.cycle_life != null && (!Number.isInteger(payload.cycle_life) || payload.cycle_life <= 0)) throw new Error("Cycle life must be a positive whole number.");
 
@@ -271,7 +271,7 @@ export async function createCompatibility(fd: FormData) {
   const batteryId = text(fd, "battery_id");
   const status = text(fd, "status") || "approved";
   if (!inverterId || !batteryId) fail("compatibility", "Choose an inverter and battery.");
-  if (!['approved','conditional','not_compatible'].includes(status)) fail("compatibility", "Choose a valid compatibility state.");
+  if (!["approved", "conditional", "not_compatible"].includes(status)) fail("compatibility", "Choose a valid compatibility state.");
 
   const [{ data: inverter }, { data: battery }] = await Promise.all([
     supabase.from("inverters").select("id,model,inverter_type,battery_voltage_min_v,battery_voltage_max_v").eq("id", inverterId).eq("organisation_id", organisationId).maybeSingle(),
@@ -313,36 +313,65 @@ export async function setEquipmentStatus(fd: FormData) {
   const entity = text(fd, "entity") as EquipmentEntity;
   const id = text(fd, "id");
   const status = text(fd, "status");
-  if (!id || !['pv_module','inverter','battery'].includes(entity) || !['draft','approved','retired'].includes(status)) fail("modules", "Invalid equipment status change.");
+  if (!id || !["pv_module", "inverter", "battery"].includes(entity) || !["draft", "approved", "retired"].includes(status)) fail("modules", "Invalid equipment status change.");
 
-  const config = {
-    pv_module: { table: "pv_modules", tab: "modules" as const, select: "id,model,datasheet_url,temp_coeff_voc_pct_c,max_system_voltage_v" },
-    inverter: { table: "inverters", tab: "inverters" as const, select: "id,model,datasheet_url,max_pv_input_power_kw" },
-    battery: { table: "batteries", tab: "batteries" as const, select: "id,model,datasheet_url,max_dod_pct,round_trip_efficiency_pct" },
-  }[entity];
+  let tab: EquipmentTab;
+  let model: string;
 
-  const { data: record, error: readError } = await supabase.from(config.table).select(config.select).eq("id", id).eq("organisation_id", organisationId).maybeSingle();
-  if (readError || !record) fail(config.tab, readError?.message ?? "Equipment record not found.");
-
-  if (status === "approved") {
-    if (!record.datasheet_url) fail(config.tab, "A manufacturer datasheet is required before technical approval.");
-    if (entity === "pv_module" && (record.temp_coeff_voc_pct_c == null || record.max_system_voltage_v == null)) fail(config.tab, "Record the module Voc temperature coefficient and maximum system voltage before approval.");
-    if (entity === "inverter" && record.max_pv_input_power_kw == null) fail(config.tab, "Record the inverter maximum PV input power before approval.");
-    if (entity === "battery" && (record.max_dod_pct == null || record.round_trip_efficiency_pct == null)) fail(config.tab, "Record battery DoD and round-trip efficiency before approval.");
+  if (entity === "pv_module") {
+    tab = "modules";
+    const { data: record, error: readError } = await supabase
+      .from("pv_modules")
+      .select("id,model,datasheet_url,temp_coeff_voc_pct_c,max_system_voltage_v")
+      .eq("id", id)
+      .eq("organisation_id", organisationId)
+      .maybeSingle();
+    if (readError || !record) fail(tab, readError?.message ?? "PV module not found.");
+    if (status === "approved") {
+      if (!record.datasheet_url) fail(tab, "A manufacturer datasheet is required before technical approval.");
+      if (record.temp_coeff_voc_pct_c == null || record.max_system_voltage_v == null) fail(tab, "Record the module Voc temperature coefficient and maximum system voltage before approval.");
+    }
+    const { error } = await supabase.from("pv_modules").update({ status, approved_by: status === "approved" ? user.id : null, approved_at: status === "approved" ? new Date().toISOString() : null, updated_at: new Date().toISOString() }).eq("id", id).eq("organisation_id", organisationId);
+    if (error) fail(tab, error.message);
+    model = record.model;
+  } else if (entity === "inverter") {
+    tab = "inverters";
+    const { data: record, error: readError } = await supabase
+      .from("inverters")
+      .select("id,model,datasheet_url,max_pv_input_power_kw")
+      .eq("id", id)
+      .eq("organisation_id", organisationId)
+      .maybeSingle();
+    if (readError || !record) fail(tab, readError?.message ?? "Inverter not found.");
+    if (status === "approved") {
+      if (!record.datasheet_url) fail(tab, "A manufacturer datasheet is required before technical approval.");
+      if (record.max_pv_input_power_kw == null) fail(tab, "Record the inverter maximum PV input power before approval.");
+    }
+    const { error } = await supabase.from("inverters").update({ status, approved_by: status === "approved" ? user.id : null, approved_at: status === "approved" ? new Date().toISOString() : null, updated_at: new Date().toISOString() }).eq("id", id).eq("organisation_id", organisationId);
+    if (error) fail(tab, error.message);
+    model = record.model;
+  } else {
+    tab = "batteries";
+    const { data: record, error: readError } = await supabase
+      .from("batteries")
+      .select("id,model,datasheet_url,max_dod_pct,round_trip_efficiency_pct")
+      .eq("id", id)
+      .eq("organisation_id", organisationId)
+      .maybeSingle();
+    if (readError || !record) fail(tab, readError?.message ?? "Battery not found.");
+    if (status === "approved") {
+      if (!record.datasheet_url) fail(tab, "A manufacturer datasheet is required before technical approval.");
+      if (record.max_dod_pct == null || record.round_trip_efficiency_pct == null) fail(tab, "Record battery DoD and round-trip efficiency before approval.");
+    }
+    const { error } = await supabase.from("batteries").update({ status, approved_by: status === "approved" ? user.id : null, approved_at: status === "approved" ? new Date().toISOString() : null, updated_at: new Date().toISOString() }).eq("id", id).eq("organisation_id", organisationId);
+    if (error) fail(tab, error.message);
+    model = record.model;
   }
-
-  const { error } = await supabase.from(config.table).update({
-    status,
-    approved_by: status === "approved" ? user.id : null,
-    approved_at: status === "approved" ? new Date().toISOString() : null,
-    updated_at: new Date().toISOString(),
-  }).eq("id", id).eq("organisation_id", organisationId);
-  if (error) fail(config.tab, error.message);
 
   try {
-    await logEquipmentEvent(supabase, organisationId, user.id, `equipment.${entity}.status_changed`, `${record.model} marked ${status}`);
+    await logEquipmentEvent(supabase, organisationId, user.id, `equipment.${entity}.status_changed`, `${model} marked ${status}`);
   } catch (auditError) {
-    fail(config.tab, auditError instanceof Error ? auditError.message : "Equipment audit event failed.");
+    fail(tab, auditError instanceof Error ? auditError.message : "Equipment audit event failed.");
   }
-  success(config.tab, "updated");
+  success(tab, "updated");
 }
