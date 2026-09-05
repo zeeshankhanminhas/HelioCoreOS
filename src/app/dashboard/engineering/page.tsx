@@ -56,7 +56,7 @@ export default async function EngineeringPage({ searchParams }: Props) {
             <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--muted)]">One shared engineering foundation for On-grid, Off-grid and Hybrid systems. Load profile is mandatory across all three, while system-specific rules branch after the common intake.</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="border border-[var(--line)] px-4 py-3 text-xs leading-5 text-[var(--muted)]"><span className="font-semibold text-[var(--foreground)]">Build focus:</span> intake → load model → equipment → calculations → validation → BOM</div>
+            <div className="border border-[var(--line)] px-4 py-3 text-xs leading-5 text-[var(--muted)]"><span className="font-semibold text-[var(--foreground)]">Build focus:</span> intake → load model → equipment → design engine → validation → BOM</div>
             <Link href="/dashboard/engineering/equipment" className="inline-flex min-h-11 items-center justify-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white">Equipment Library</Link>
           </div>
         </div>
@@ -76,16 +76,17 @@ export default async function EngineeringPage({ searchParams }: Props) {
           <div className="divide-y divide-[var(--line)]">
             {recentIntakes.map((intake) => {
               const opportunity = opportunityMap.get(intake.opportunity_id);
+              const destination = intake.status === "ready" ? `/dashboard/engineering/designs/${intake.id}` : intake.load_profile_id ? `/dashboard/engineering/load-profiles/${intake.load_profile_id}` : null;
               const content = (
-                <article className="grid gap-3 p-5 md:grid-cols-[minmax(0,1.5fr)_140px_minmax(0,1fr)_100px_120px] md:items-center md:px-6">
+                <article className="grid gap-3 p-5 md:grid-cols-[minmax(0,1.5fr)_140px_minmax(0,1fr)_140px_120px] md:items-center md:px-6">
                   <div><p className="text-sm font-semibold">{opportunity?.reference ?? "Engineering intake"}</p><p className="mt-1 truncate text-xs text-[var(--muted)]">{opportunity?.title ?? intake.id}</p></div>
                   <p className="text-xs font-semibold">{systemTypeLabels[intake.system_type as SystemType] ?? titleCase(intake.system_type)}</p>
                   <p className="text-xs text-[var(--muted)]">{titleCase(intake.design_objective)}</p>
-                  <p className="text-xs text-[var(--muted)]">{titleCase(intake.status)}</p>
+                  <p className={`text-xs font-semibold ${intake.status === "ready" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>{intake.status === "ready" ? "Ready · Open design" : "Complete load profile"}</p>
                   <p className="text-xs tabular-nums text-[var(--muted)] md:text-right">{date.format(new Date(intake.created_at))}</p>
                 </article>
               );
-              return intake.load_profile_id ? <Link key={intake.id} href={`/dashboard/engineering/load-profiles/${intake.load_profile_id}`} className="block hover:bg-white/35">{content}</Link> : <div key={intake.id}>{content}</div>;
+              return destination ? <Link key={intake.id} href={destination} className="block hover:bg-white/35">{content}</Link> : <div key={intake.id}>{content}</div>;
             })}
           </div>
         ) : <div className="px-6 py-12 text-sm text-[var(--muted)]">No engineering intakes have been created yet. The first saved intake will appear here.</div>}
