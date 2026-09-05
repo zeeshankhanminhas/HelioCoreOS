@@ -1,6 +1,7 @@
 import type { EngineeringValidation, SystemType } from "./types";
 
-export const CALCULATOR_ENGINE_VERSION = "calculator-v1.0.0";
+// Browser/UI preview only. Persisted engineering calculations are recomputed by Python HelioCalc.
+export const CALCULATOR_PREVIEW_VERSION = "calculator-preview-v1.0.0";
 
 export type CalculatorInputs = {
   systemType: SystemType;
@@ -112,7 +113,7 @@ export function calculateSystemSizing(input: CalculatorInputs): CalculatorResult
   }
 
   if (!checks.some((item) => item.severity === "error")) {
-    push(checks, "pass", "calculator_ready", "Preliminary sizing is complete", "This result is suitable as a sizing basis for the next engineering stage. Exact equipment selection and electrical design remain downstream.");
+    push(checks, "pass", "calculator_preview_ready", "Preliminary preview is complete", "This browser result is a preview only. Saving the revision triggers authoritative Python HelioCalc recomputation.");
   }
 
   return {
