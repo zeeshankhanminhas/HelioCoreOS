@@ -83,7 +83,6 @@ export function DesignIntake({ opportunities, initialOpportunityId }: Props) {
   return (
     <form action={createEngineeringIntake} className="grid gap-7 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
       <input type="hidden" name="system_type" value={systemType} />
-      <input type="hidden" name="load_profile_source" value={loadProfileSource} />
       <input type="hidden" name="design_objective" value={objective} />
 
       <div className="space-y-7">
@@ -128,19 +127,36 @@ export function DesignIntake({ opportunities, initialOpportunityId }: Props) {
           <div className="border-b border-[var(--line)] p-5 md:px-6">
             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">03 · Load Profile</p>
             <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Choose the demand evidence source</h2>
-            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">The next workspace builds the governed demand model. The Calculator does not open until that Load Profile is Ready.</p>
+            <p className="mt-2 text-sm leading-6 text-[var(--muted)]">Choose one source. The whole card is selectable and the selected evidence source is carried into the governed Load Profile workspace.</p>
           </div>
-          <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2">
-            {loadSources.map((source) => {
-              const active = source.value === loadProfileSource;
-              return (
-                <button key={source.value} type="button" onClick={() => setLoadProfileSource(source.value)} className={`bg-[var(--background)] p-5 text-left ${active ? "outline outline-2 outline-inset outline-[var(--accent)]" : "hover:bg-white/45"}`}>
-                  <span className="text-sm font-semibold">{source.label}</span>
-                  <span className="mt-2 block text-xs leading-5 text-[var(--muted)]">{source.detail}</span>
-                </button>
-              );
-            })}
-          </div>
+          <fieldset>
+            <legend className="sr-only">Load Profile evidence source</legend>
+            <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2">
+              {loadSources.map((source, index) => {
+                const active = source.value === loadProfileSource;
+                return (
+                  <label
+                    key={source.value}
+                    className={`relative min-h-32 cursor-pointer bg-[var(--background)] p-5 pr-14 text-left transition-colors focus-within:z-10 focus-within:outline focus-within:outline-2 focus-within:outline-[var(--accent)] ${active ? "z-10 outline outline-2 outline-inset outline-[var(--accent)]" : "hover:bg-white/45"}`}
+                  >
+                    <input
+                      type="radio"
+                      name="load_profile_source"
+                      value={source.value}
+                      checked={active}
+                      onChange={() => setLoadProfileSource(source.value)}
+                      className="absolute right-5 top-5 h-4 w-4 cursor-pointer accent-[var(--accent)]"
+                    />
+                    <span className={`block text-[10px] font-semibold uppercase tracking-[0.16em] ${active ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>
+                      {String(index + 1).padStart(2, "0")} · {active ? "Selected" : "Evidence source"}
+                    </span>
+                    <span className="mt-4 block text-sm font-semibold">{source.label}</span>
+                    <span className="mt-2 block max-w-sm text-xs leading-5 text-[var(--muted)]">{source.detail}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
         </section>
 
         <section className="border border-[var(--line)] p-5 md:p-6">
