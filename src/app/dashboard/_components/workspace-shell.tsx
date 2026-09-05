@@ -6,8 +6,9 @@ import { useState } from "react";
 
 const navigation = [
   { label: "Command", items: [{ href: "/dashboard", label: "Overview" }, { href: "/dashboard/tasks", label: "Tasks" }] },
-  { label: "Commercial", items: [{ href: "/dashboard/opportunities", label: "Opportunities" }, { href: "/dashboard/customers", label: "Customers" }, { href: "/dashboard/sites", label: "Sites" }] },
-  { label: "Delivery", items: [{ href: "/dashboard/projects", label: "Projects" }, { href: "/dashboard/engineering", label: "Engineering" }] },
+  { label: "Pre-contract", items: [{ href: "/dashboard/opportunities", label: "Opportunities" }, { href: "/dashboard/customers", label: "Customers" }, { href: "/dashboard/sites", label: "Sites" }] },
+  { label: "Engineering", items: [{ href: "/dashboard/engineering", label: "Engineering workspace" }, { href: "/dashboard/engineering/equipment", label: "Equipment library" }] },
+  { label: "Delivery", items: [{ href: "/dashboard/projects", label: "Projects" }] },
   { label: "Administration", items: [{ href: "/dashboard/team", label: "Team & access" }] },
 ];
 
@@ -19,6 +20,9 @@ const routeLabels: Record<string, string> = {
   sites: "Sites",
   projects: "Projects",
   engineering: "Engineering",
+  equipment: "Equipment library",
+  calculators: "Calculator",
+  "load-profiles": "Load Profile",
   team: "Team & access",
   new: "Create",
   edit: "Edit",
@@ -26,11 +30,11 @@ const routeLabels: Record<string, string> = {
 
 const sectionLabels: Record<string, string> = {
   tasks: "Command",
-  opportunities: "Commercial",
-  customers: "Commercial",
-  sites: "Commercial",
+  opportunities: "Pre-contract",
+  customers: "Pre-contract",
+  sites: "Pre-contract",
+  engineering: "Engineering",
   projects: "Delivery",
-  engineering: "Delivery",
   team: "Administration",
 };
 
@@ -79,7 +83,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
           <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{group.label}</p>
           <div className="space-y-1">
             {group.items.map((item) => {
-              const active = item.href === "/dashboard" ? pathname === item.href : pathname.startsWith(item.href);
+              const active = item.href === "/dashboard" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
                 <Link
                   key={item.href}
