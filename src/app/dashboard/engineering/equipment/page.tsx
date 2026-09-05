@@ -103,7 +103,7 @@ export default async function EquipmentLibraryPage({ searchParams }: Props) {
       <nav className="mt-7 overflow-x-auto border-y border-[var(--line)]" aria-label="Equipment library sections">
         <div className="flex min-w-max">
           {tabs.map((tab) => (
-            <Link key={tab.id} href={`/dashboard/engineering/equipment?tab=${tab.id}`} className={`border-r border-[var(--line)] px-5 py-3 text-xs font-semibold ${activeTab === tab.id ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>{tab.label}</Link>
+            <Link scroll={false} key={tab.id} href={`/dashboard/engineering/equipment?tab=${tab.id}`} className={`border-r border-[var(--line)] px-5 py-3 text-xs font-semibold ${activeTab === tab.id ? "text-[var(--accent)]" : "text-[var(--muted)] hover:text-[var(--foreground)]"}`}>{tab.label}</Link>
           ))}
         </div>
       </nav>
