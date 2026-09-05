@@ -12,17 +12,9 @@ type Props = {
 
 const date = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
-const flow = [
-  ["01", "Opportunity", "complete"],
-  ["02", "Site", "complete"],
-  ["03", "System type", "complete"],
-  ["04", "Load Profile", "complete"],
-  ["05", "Calculator", "active"],
-  ["06", "Design", "locked"],
-  ["07", "Proposal", "future"],
-  ["08", "Contract", "future"],
-  ["09", "Project", "future"],
-] as const;
+function titleCase(value: string) {
+  return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
+}
 
 export default async function CalculatorPage({ params, searchParams }: Props) {
   const { intakeId } = await params;
@@ -45,38 +37,115 @@ export default async function CalculatorPage({ params, searchParams }: Props) {
 
   if (!opportunity || !site || !load) notFound();
   const ready = load.status === "ready";
+  const systemLabel = systemTypeLabels[intake.system_type as SystemType] ?? titleCase(intake.system_type);
 
   return (
     <div className="mx-auto max-w-[1600px]">
-      <header className="border-b border-[var(--line)] pb-6">
-        <div className="flex flex-wrap items-center gap-3 text-xs text-[var(--muted)]"><Link href="/dashboard/engineering" className="hover:text-[var(--foreground)]">Engineering</Link><span>/</span><span>{opportunity.reference}</span><span>/</span><span>Calculator</span></div>
-        <div className="mt-4 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+      <header className="border-b border-[var(--line)] pb-5">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Engineering calculator · V1</p>
-            <h1 className="mt-2 text-4xl font-medium tracking-[-0.045em] md:text-5xl">Size the system before designing it</h1>
-            <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--muted)]">{opportunity.reference} · {site.name}{site.postcode ? ` · ${site.postcode}` : ""} · {systemTypeLabels[intake.system_type as SystemType] ?? intake.system_type}</p>
+            <div className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">
+              <Link href="/dashboard/engineering" className="hover:text-[var(--foreground)]">Engineering</Link>
+              <span>/</span>
+              <span>{opportunity.reference}</span>
+              <span>/</span>
+              <span className="text-[var(--accent)]">Calculator</span>
+            </div>
+            <h1 className="mt-3 text-3xl font-medium tracking-[-0.04em] md:text-4xl">System sizing</h1>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">Establish the capacity requirement from the governed Load Profile before selecting equipment or compiling the detailed electrical design.</p>
           </div>
-          <Link href={`/dashboard/engineering/load-profiles/${load.id}`} className="w-fit border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Open Load Profile</Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/dashboard/engineering/load-profiles/${load.id}`} className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold hover:border-[var(--foreground)]">Open Load Profile</Link>
+            <Link href="/dashboard/engineering/equipment" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold text-[var(--muted)] hover:border-[var(--foreground)] hover:text-[var(--foreground)]">Equipment Library</Link>
+          </div>
         </div>
       </header>
 
-      <section className="mt-5 overflow-x-auto border border-[var(--line)]">
-        <div className="flex min-w-[1050px]">
-          {flow.map(([number, label, state], index) => <div key={label} className={`min-w-[116px] flex-1 border-r border-[var(--line)] px-4 py-3 last:border-r-0 ${state === "active" ? "bg-white/45" : ""}`}><div className="flex items-center justify-between gap-2"><span className={`text-[10px] font-semibold ${state === "complete" || state === "active" ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>{number}</span><span className="text-[9px] uppercase tracking-[0.12em] text-[var(--muted)]">{state === "complete" ? "Done" : state === "active" ? "Now" : state === "locked" ? "Next" : index === 8 ? "After contract" : "Later"}</span></div><p className={`mt-2 text-xs font-semibold ${state === "future" ? "text-[var(--muted)]" : ""}`}>{label}</p></div>)}
+      <section className="mt-5 grid gap-px border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">
+        {[
+          ["Opportunity", opportunity.reference],
+          ["Site", site.postcode ? `${site.name} · ${site.postcode}` : site.name],
+          ["System", systemLabel],
+          ["Objective", titleCase(intake.design_objective)],
+          ["Load Profile", ready ? `Ready · ${titleCase(load.data_quality ?? "governed")}` : titleCase(load.status)],
+        ].map(([label, value]) => (
+          <div key={label} className="min-w-0 bg-[var(--background)] px-4 py-4">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{label}</p>
+            <p className={`mt-2 truncate text-xs font-semibold ${label === "Load Profile" && ready ? "text-emerald-700" : ""}`}>{value}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="mt-3 flex flex-col gap-3 border-l-2 border-[var(--accent)] px-4 py-3 text-xs sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-semibold">Current stage · Calculator</span>
+          <span className="text-[var(--muted)]">Sizing only. No product is selected here.</span>
+        </div>
+        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.13em] text-[var(--muted)]">
+          <span>Next</span><span aria-hidden="true">→</span><span>Equipment</span><span aria-hidden="true">→</span><span>Detailed Design</span><span aria-hidden="true">→</span><span>SLD + BOM</span>
         </div>
       </section>
 
-      {messages.error ? <div className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{messages.error}</div> : null}
-      {messages.saved ? <div className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Sizing revision saved. Detailed Design remains a separate downstream engineering stage.</div> : null}
+      {messages.error ? <div className="mt-5 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{messages.error}</div> : null}
+      {messages.saved ? <div className="mt-5 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Sizing revision saved through the governed calculator path. Equipment selection and Detailed Design remain downstream.</div> : null}
 
-      {!ready ? <section className="mt-7 border border-amber-300 bg-amber-50 p-6 text-amber-900"><h2 className="text-lg font-semibold">Load Profile is not ready</h2><p className="mt-2 text-sm leading-6">Calculator access is gated until the shared Load Profile is complete and marked Ready.</p><Link href={`/dashboard/engineering/load-profiles/${load.id}`} className="mt-4 inline-block border border-amber-500 px-4 py-2 text-xs font-semibold">Complete Load Profile</Link></section> : <div className="mt-7"><CalculatorWorkspace intakeId={intake.id} opportunityId={opportunity.id} systemType={intake.system_type as SystemType} autonomyHours={intake.autonomy_hours == null ? null : Number(intake.autonomy_hours)} load={{ annualEnergyKwh: Number(load.annual_energy_kwh ?? 0), averageDailyEnergyKwh: Number(load.average_daily_energy_kwh ?? 0), peakDemandKw: Number(load.peak_demand_kw ?? 0), essentialPeakDemandKw: Number(load.essential_peak_demand_kw ?? 0) }} /></div>}
+      {!ready ? (
+        <section className="mt-6 border border-amber-300 bg-amber-50 p-6 text-amber-900">
+          <h2 className="text-lg font-semibold">Load Profile is not ready</h2>
+          <p className="mt-2 text-sm leading-6">Calculator access is gated until the shared Load Profile is complete and marked Ready.</p>
+          <Link href={`/dashboard/engineering/load-profiles/${load.id}`} className="mt-4 inline-block border border-amber-500 px-4 py-2 text-xs font-semibold">Complete Load Profile</Link>
+        </section>
+      ) : (
+        <div className="mt-6">
+          <CalculatorWorkspace
+            intakeId={intake.id}
+            opportunityId={opportunity.id}
+            systemType={intake.system_type as SystemType}
+            autonomyHours={intake.autonomy_hours == null ? null : Number(intake.autonomy_hours)}
+            load={{
+              annualEnergyKwh: Number(load.annual_energy_kwh ?? 0),
+              averageDailyEnergyKwh: Number(load.average_daily_energy_kwh ?? 0),
+              peakDemandKw: Number(load.peak_demand_kw ?? 0),
+              essentialPeakDemandKw: Number(load.essential_peak_demand_kw ?? 0),
+            }}
+          />
+        </div>
+      )}
 
-      <section className="mt-8 border border-[var(--line)]">
-        <div className="flex items-end justify-between gap-4 border-b border-[var(--line)] p-5 md:px-6"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Calculator register</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Saved sizing history</h2></div><span className="text-xs tabular-nums text-[var(--muted)]">{revisions?.length ?? 0} revisions</span></div>
-        {revisions?.length ? <div className="divide-y divide-[var(--line)]">{revisions.map((revision) => {
-          const result = revision.result_snapshot as { recommendedPvKwp?: number | null; recommendedInverterAcKw?: number | null; batteryNominalKwh?: number | null } | null;
-          return <article key={revision.id} className="grid gap-3 p-5 md:grid-cols-[1fr_80px_130px_130px_130px_120px] md:items-center md:px-6"><div><p className="text-sm font-semibold">{revision.calculation_reference}</p><p className="mt-1 text-xs text-[var(--muted)]">{revision.engine_version}</p></div><p className="text-xs">Rev {revision.revision}</p><p className="text-xs tabular-nums">{result?.recommendedPvKwp == null ? "—" : `${Number(result.recommendedPvKwp).toFixed(2)} kWp`}</p><p className="text-xs tabular-nums">{result?.recommendedInverterAcKw == null ? "—" : `${Number(result.recommendedInverterAcKw).toFixed(2)} kW AC`}</p><p className="text-xs tabular-nums">{result?.batteryNominalKwh == null ? "No BESS" : `${Number(result.batteryNominalKwh).toFixed(1)} kWh`}</p><p className="text-xs tabular-nums text-[var(--muted)] md:text-right">{date.format(new Date(revision.created_at))}</p></article>;
-        })}</div> : <div className="px-6 py-10 text-sm text-[var(--muted)]">No sizing revisions yet. Complete the Calculator assumptions and save the first sizing basis.</div>}
+      <section className="mt-7 border border-[var(--line)]">
+        <div className="flex flex-col gap-3 border-b border-[var(--line)] p-5 sm:flex-row sm:items-end sm:justify-between md:px-6">
+          <div>
+            <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Revision control</p>
+            <h2 className="mt-2 text-xl font-medium tracking-[-0.03em]">Saved sizing history</h2>
+          </div>
+          <span className="text-xs tabular-nums text-[var(--muted)]">{revisions?.length ?? 0} revisions</span>
+        </div>
+        {revisions?.length ? (
+          <div className="overflow-x-auto">
+            <div className="min-w-[820px]">
+              <div className="grid grid-cols-[minmax(190px,1.3fr)_70px_120px_120px_120px_120px] border-b border-[var(--line)] px-5 py-2.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--muted)] md:px-6">
+                <span>Reference / Engine</span><span>Rev</span><span>PV</span><span>Inverter</span><span>BESS</span><span className="text-right">Saved</span>
+              </div>
+              <div className="divide-y divide-[var(--line)]">
+                {revisions.map((revision) => {
+                  const result = revision.result_snapshot as { recommendedPvKwp?: number | null; recommendedInverterAcKw?: number | null; batteryNominalKwh?: number | null } | null;
+                  return (
+                    <article key={revision.id} className="grid grid-cols-[minmax(190px,1.3fr)_70px_120px_120px_120px_120px] items-center px-5 py-4 text-xs md:px-6">
+                      <div className="min-w-0"><p className="truncate font-semibold">{revision.calculation_reference}</p><p className="mt-1 truncate text-[10px] text-[var(--muted)]">{revision.engine_version}</p></div>
+                      <p>R{revision.revision}</p>
+                      <p className="tabular-nums">{result?.recommendedPvKwp == null ? "—" : `${Number(result.recommendedPvKwp).toFixed(2)} kWp`}</p>
+                      <p className="tabular-nums">{result?.recommendedInverterAcKw == null ? "—" : `${Number(result.recommendedInverterAcKw).toFixed(2)} kW`}</p>
+                      <p className="tabular-nums">{result?.batteryNominalKwh == null ? "—" : `${Number(result.batteryNominalKwh).toFixed(1)} kWh`}</p>
+                      <p className="text-right tabular-nums text-[var(--muted)]">{date.format(new Date(revision.created_at))}</p>
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div className="px-6 py-9 text-sm text-[var(--muted)]">No saved sizing revisions yet. Complete the assumptions and save the first governed sizing basis.</div>
+        )}
       </section>
     </div>
   );
