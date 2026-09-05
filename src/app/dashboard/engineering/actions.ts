@@ -132,5 +132,5 @@ export async function createEngineeringIntake(fd: FormData) {
 
   revalidatePath("/dashboard/engineering");
   revalidatePath("/dashboard");
-  redirect(`/dashboard/engineering?created=${intake.id}`);
+  redirect(`/dashboard/engineering/load-profiles/${loadProfile.id}`);
 }
