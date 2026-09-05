@@ -7,7 +7,7 @@ import { useState } from "react";
 const navigation = [
   { label: "Command", items: [{ href: "/dashboard", label: "Overview" }, { href: "/dashboard/tasks", label: "Tasks" }] },
   { label: "Commercial", items: [{ href: "/dashboard/opportunities", label: "Opportunities" }, { href: "/dashboard/customers", label: "Customers" }, { href: "/dashboard/sites", label: "Sites" }] },
-  { label: "Delivery", items: [{ href: "/dashboard/projects", label: "Projects" }] },
+  { label: "Delivery", items: [{ href: "/dashboard/projects", label: "Projects" }, { href: "/dashboard/engineering", label: "Engineering" }] },
   { label: "Administration", items: [{ href: "/dashboard/team", label: "Team & access" }] },
 ];
 
@@ -18,6 +18,7 @@ const routeLabels: Record<string, string> = {
   customers: "Customers",
   sites: "Sites",
   projects: "Projects",
+  engineering: "Engineering",
   team: "Team & access",
   new: "Create",
   edit: "Edit",
@@ -29,6 +30,7 @@ const sectionLabels: Record<string, string> = {
   customers: "Commercial",
   sites: "Commercial",
   projects: "Delivery",
+  engineering: "Delivery",
   team: "Administration",
 };
 
