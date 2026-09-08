@@ -2,7 +2,7 @@
 
 **Status:** Governing UI quality standard  
 **Applies to:** All new or modified HelioCoreOS interface code  
-**Relationship:** Supplements `docs/UX-CONSTITUTION.md` and `docs/UI-COMPONENT-STRATEGY.md`
+**Relationship:** Supplements `docs/UX-CONSTITUTION.md`, `docs/UI-COMPONENT-STRATEGY.md`, and `skills/heliocore-ui/SKILL.md`
 
 ## Purpose
 
@@ -13,9 +13,20 @@ The governing hierarchy is:
 1. `docs/UX-CONSTITUTION.md` — HelioCoreOS product experience and visual direction.
 2. `docs/UI-COMPONENT-STRATEGY.md` — component and implementation strategy.
 3. This document — interaction, optical and implementation quality checks.
-4. External source guidance — fetched fresh when auditing UI work.
+4. `skills/heliocore-ui/SKILL.md` — Agent Skills-compatible execution workflow.
+5. External source guidance — fetched fresh when auditing UI work.
 
 If an external preference conflicts with the HelioCoreOS Constitution, HelioCoreOS wins.
+
+## Agent Skills format
+
+HelioCoreOS uses the open Agent Skills specification at https://agentskills.io/specification to package its repeatable UI workflow.
+
+The local skill is:
+
+- `skills/heliocore-ui/SKILL.md`
+
+Use progressive disclosure: load the skill first for the workflow, then read the longer governing documents or external references only when the task requires them.
 
 ## External sources
 
@@ -35,6 +46,22 @@ Use Vercel guidance for interaction correctness, accessibility, layout precision
 - Better Layout: https://github.com/jakubkrehel/skills/tree/main/skills/better-layout
 
 Use these references for design-engineering polish: concentric radii, optical alignment, hit areas, surface depth, grouping, icon balance, motion restraint and accessibility detail.
+
+### Plugin87 UX/UI Agent Skills
+
+- Repository: https://github.com/plugin87/ux-ui-agent-skills
+
+Use Plugin87 as an additional design-system and redesign-process reference, especially for:
+
+- audit-first redesign rather than cosmetic-first restyling;
+- semantic design tokens and single-theme consistency;
+- framework-aware UI implementation;
+- design review and accessibility review;
+- WCAG 2.2-minded quality checks;
+- preservation of working behaviour while redesigning;
+- applying changes in a controlled sequence: tokens → typography/spacing → layout/grouping → component states → responsive behaviour → motion/polish.
+
+Plugin87's visual presets, example design systems, or aesthetic defaults do not override HelioCoreOS's brand or product hierarchy.
 
 ## Mandatory quality rules
 
@@ -129,6 +156,26 @@ Skeletons should mirror final content closely enough to avoid layout shift. Load
 - Forms use mobile-friendly input sizing and preserve browser zoom.
 - Avoid accidental horizontal scrolling; data-heavy registers require an intentional mobile representation or controlled horizontal data viewport.
 
+### 11. One semantic theme, not page-by-page styling
+
+- Maintain one shared HelioCoreOS theme across all modules.
+- Prefer semantic tokens by intent over raw colour or page-specific styling values.
+- Do not solve a local design problem by introducing a new palette, radius system, shadow vocabulary, spacing scale or control style.
+- New components must consume shared tokens where a suitable token exists.
+- When a missing semantic token is genuinely required, add it at the design-system layer rather than hard-coding repeated values in pages.
+
+### 12. Redesign is audit-first
+
+Before a material redesign:
+
+1. Scan the current implementation and identify stable behaviour that must remain.
+2. Diagnose root causes before choosing a visual treatment.
+3. Direct the redesign through shared product patterns and tokens.
+4. Apply changes in system order rather than screen-by-screen improvisation.
+5. Verify both design quality and previous working flows.
+
+A redesign that produces individually attractive screens but leaves inconsistent patterns or multiple visual themes has failed.
+
 ## HelioCoreOS-specific visual guardrails
 
 External guidance must not pull the product toward another company's visual identity.
@@ -158,23 +205,27 @@ Avoid:
 
 For any material UI change:
 
-1. Read `docs/UX-CONSTITUTION.md`.
-2. Read `docs/UI-COMPONENT-STRATEGY.md`.
-3. Fetch the latest Vercel Web Interface Guidelines rather than relying on a stale local copy.
-4. Review relevant Better UI / Better Accessibility / Better Layout rules.
-5. Inspect every changed interaction state.
-6. Verify keyboard navigation and visible focus.
-7. Verify hit areas on desktop and touch.
-8. Inspect nested radii and optical alignment.
-9. Verify mobile, laptop and wide layouts.
-10. Run TypeScript, lint and production build checks.
+1. Read `skills/heliocore-ui/SKILL.md`.
+2. Read `docs/UX-CONSTITUTION.md`.
+3. Read `docs/UI-COMPONENT-STRATEGY.md`.
+4. Fetch the latest Vercel Web Interface Guidelines rather than relying on a stale local copy.
+5. Review relevant Better UI / Better Accessibility / Better Layout rules.
+6. Review relevant Plugin87 redesign, design-review, token and accessibility guidance.
+7. Inspect every changed interaction state.
+8. Verify keyboard navigation and visible focus.
+9. Verify hit areas on desktop and touch.
+10. Inspect nested radii and optical alignment.
+11. Check semantic-token use and single-theme consistency.
+12. Verify mobile, laptop and wide layouts.
+13. Re-test previously working flows affected by the redesign.
+14. Run TypeScript, lint and production build checks.
 
 ### Review verdict
 
 Use the following severity model for UI reviews:
 
 - **HIGH** — broken task, inaccessible flow, lost state, unusable hit area, hidden critical state or systemic interaction failure.
-- **MEDIUM** — meaningful inconsistency in hierarchy, grouping, controls, responsiveness, motion or surface treatment.
+- **MEDIUM** — meaningful inconsistency in hierarchy, grouping, controls, responsiveness, motion, token usage or surface treatment.
 - **LOW** — isolated optical/polish issue.
 
 A UI change is not ready while a HIGH issue remains. Unverified browser states must be reported as unverified rather than assumed correct.
