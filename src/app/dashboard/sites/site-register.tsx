@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, ExternalLink, Search, X } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { DataRegister, type DataRegisterColumn } from "@/components/heliocore/data-register";
+import { DataRegister, dataRegisterFeatures } from "@/components/heliocore/data-register";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,12 +36,12 @@ function riskClass(risk: SiteRegisterRow["risk"]) {
 }
 
 export function SiteRegister({ rows }: { rows: SiteRegisterRow[] }) {
-  const [q, setQ] = useQueryState("q", parseAsString.withDefault(""), { history: "push" });
+  const [q, setQ] = useQueryState("q", parseAsString.withDefault("").withOptions({ history: "push" }));
   const form = useForm<Filters>({ resolver: zodResolver(filterSchema), values: { q } });
   const needle = q.trim().toLowerCase();
   const filteredRows = useMemo(() => rows.filter((row) => !needle || [row.name, row.customer, row.address, row.postcode, riskLabel(row.risk)].some((value) => value.toLowerCase().includes(needle))), [needle, rows]);
 
-  const columns = useMemo<DataRegisterColumn<SiteRegisterRow>[]>(() => [
+  const columns = useMemo<ColumnDef<typeof dataRegisterFeatures, SiteRegisterRow>[]>(() => [
     { accessorKey: "name", header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>Site <ArrowUpDown className="h-3.5 w-3.5" /></Button>, cell: ({ row }) => <div className="flex items-start gap-3"><span aria-hidden="true" className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${riskClass(row.original.risk)}`} /><div><Link href={`/dashboard/sites/${row.original.id}`} className="font-semibold hover:underline">{row.original.name}</Link><p className="mt-1 text-xs text-[var(--muted)]">{row.original.customer}</p></div></div> },
     { accessorKey: "address", header: "Location", cell: ({ row }) => <div><p className="text-sm">{row.original.address}</p><p className="mt-1 text-xs font-medium text-[var(--muted)]">{row.original.postcode}</p></div> },
     { accessorKey: "risk", header: "Delivery risk", cell: ({ row }) => <div className="flex items-center gap-2"><span aria-hidden="true" className={`h-2 w-2 rounded-full ${riskClass(row.original.risk)}`} /><span className="text-xs font-semibold">{riskLabel(row.original.risk)}</span></div> },
