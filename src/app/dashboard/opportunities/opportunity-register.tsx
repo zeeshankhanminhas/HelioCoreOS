@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type ColumnDef,
@@ -48,19 +48,21 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     { q: parseAsString.withDefault(""), stage: parseAsString.withDefault("") },
     { history: "push" },
   );
+  const [sorting, setSorting] = useState<SortingState>([{ id: "title", desc: false }]);
+  const validStage = opportunityStages.includes(stage as (typeof opportunityStages)[number]) ? stage : "";
   const form = useForm<OpportunityFilters>({
     resolver: zodResolver(opportunityFilterSchema),
-    values: { q, stage: opportunityStages.includes(stage as (typeof opportunityStages)[number]) ? stage as OpportunityFilters["stage"] : "" },
+    values: { q, stage: validStage as OpportunityFilters["stage"] },
   });
 
   const filteredRows = useMemo(() => {
     const needle = q.trim().toLowerCase();
     return rows.filter((row) => {
-      const stageMatches = !stage || row.stage === stage;
+      const stageMatches = !validStage || row.stage === validStage;
       const searchMatches = !needle || [row.title, row.reference, row.customer, row.site, row.owner].some((value) => value.toLowerCase().includes(needle));
       return stageMatches && searchMatches;
     });
-  }, [q, rows, stage]);
+  }, [q, rows, validStage]);
 
   const columns = useMemo<ColumnDef<OpportunityRegisterRow>[]>(() => [
     {
@@ -68,14 +70,13 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
       header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Opportunity <ArrowUpDown className="h-3.5 w-3.5" /></Button>,
       cell: ({ row }) => <div><Link href={`/dashboard/opportunities/${row.original.id}`} className="font-semibold hover:underline">{row.original.title}</Link><p className="mt-1 text-xs text-[var(--muted)]">{row.original.reference}</p></div>,
     },
-    { accessorKey: "customer", header: "Customer", cell: ({ row }) => <div><p className="font-medium">{row.original.customer}</p><p className="mt-1 text-xs text-[var(--muted)]">{row.original.site}</p></div> },
+    { accessorKey: "customer", header: "Customer / Site", cell: ({ row }) => <div><p className="font-medium">{row.original.customer}</p><p className="mt-1 text-xs text-[var(--muted)]">{row.original.site}</p></div> },
     { accessorKey: "stage", header: "Stage", cell: ({ getValue }) => <span className={`inline-flex border px-2.5 py-1 text-xs font-semibold ${statusClass(String(getValue()))}`}>{titleCase(String(getValue()))}</span> },
     { accessorKey: "owner", header: "Owner", cell: ({ getValue }) => <span className="text-xs text-[var(--muted)]">{String(getValue())}</span> },
     { accessorKey: "valueNumber", header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Estimated value <ArrowUpDown className="h-3.5 w-3.5" /></Button>, cell: ({ row }) => <span className="font-semibold tabular-nums">{row.original.valueLabel}</span> },
     { id: "open", header: "", cell: ({ row }) => <Button asChild variant="ghost" size="icon"><Link href={`/dashboard/opportunities/${row.original.id}`} aria-label={`Open ${row.original.title}`}><ExternalLink className="h-4 w-4" /></Link></Button> },
   ], []);
 
-  const [sorting, setSorting] = ReactUseSorting();
   const table = useReactTable({ data: filteredRows, columns, state: { sorting }, onSortingChange: setSorting, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel() });
 
   const applyFilters = form.handleSubmit(async (values) => {
@@ -92,12 +93,12 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
       <form onSubmit={applyFilters} className="grid gap-4 border-b border-[var(--line)] p-4 md:grid-cols-[minmax(240px,1fr)_220px_auto] md:items-end">
         <div><Label htmlFor="opportunity-search">Search</Label><div className="relative mt-2"><Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" /><Input id="opportunity-search" className="pl-9" placeholder="Title, reference, customer, site or owner" {...form.register("q")} /></div></div>
         <div><Label htmlFor="opportunity-stage">Stage</Label><NativeSelect id="opportunity-stage" className="mt-2" {...form.register("stage")}><option value="">All stages</option>{opportunityStages.map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}</NativeSelect></div>
-        <div className="flex gap-2"><Button type="submit" variant="outline">Apply filters</Button>{q || stage ? <Button type="button" variant="ghost" onClick={clearFilters}><X className="h-4 w-4" />Clear</Button> : null}</div>
+        <div className="flex gap-2"><Button type="submit" variant="outline">Apply filters</Button>{q || validStage ? <Button type="button" variant="ghost" onClick={clearFilters}><X className="h-4 w-4" />Clear</Button> : null}</div>
       </form>
 
       <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)]">
         <span>{filteredRows.length} matching {filteredRows.length === 1 ? "opportunity" : "opportunities"}</span>
-        <span>Sort by Opportunity or Estimated value</span>
+        <span>URL-persisted filters · sortable register</span>
       </div>
 
       {filteredRows.length ? (
@@ -116,9 +117,4 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
       )}
     </section>
   );
-}
-
-function ReactUseSorting(): [SortingState, React.Dispatch<React.SetStateAction<SortingState>>] {
-  const React = require("react") as typeof import("react");
-  return React.useState<SortingState>([{ id: "title", desc: false }]);
 }
