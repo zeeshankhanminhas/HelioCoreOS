@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import type { OpportunityCoreInput } from "@/lib/schemas/opportunity";
 import { updateOpportunity } from "../actions";
+import { OpportunityCoreForm } from "./opportunity-core-form";
 import { ProposalGovernance } from "./proposal-governance";
 import { ReadinessGovernance } from "./readiness-governance";
 import { RelationshipAssignment } from "./relationship-assignment";
 import { SiteSurveyGovernance } from "./site-survey-governance";
 import { WorkflowProof } from "./workflow-proof";
-
-const opportunityStages = ["lead", "qualified", "readiness", "proposal", "won", "lost"];
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
@@ -62,6 +62,18 @@ export default async function OpportunityPage({ params, searchParams }: { params
         ? `/dashboard/engineering/load-profiles/${engineering.load_profile_id}`
         : `/dashboard/engineering?opportunity=${id}`;
 
+  const coreInitialValues: OpportunityCoreInput = {
+    title: opportunity.title,
+    reference: opportunity.reference,
+    stage: opportunity.stage as OpportunityCoreInput["stage"],
+    owner_id: opportunity.owner_id ?? "",
+    lead_source: opportunity.lead_source ?? "",
+    estimated_pv_kwp: opportunity.estimated_pv_kwp == null ? undefined : Number(opportunity.estimated_pv_kwp),
+    estimated_battery_kwh: opportunity.estimated_battery_kwh == null ? undefined : Number(opportunity.estimated_battery_kwh),
+    estimated_value_gbp: opportunity.estimated_value_gbp == null ? undefined : Number(opportunity.estimated_value_gbp),
+    notes: opportunity.notes ?? "",
+  };
+
   return (
     <div className="mx-auto max-w-[1500px]">
       <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 md:flex-row md:items-end md:justify-between">
@@ -103,22 +115,15 @@ export default async function OpportunityPage({ params, searchParams }: { params
       </section>
 
       <section className="mt-7 border border-[var(--line)]">
-        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Opportunity control</p><h2 className="mt-2 text-2xl font-medium">Core commercial record</h2><p className="mt-2 text-sm text-[var(--muted)]">Maintain the commercial context here. Engineering and delivery have their own governed workspaces downstream.</p></div>
-        <form action={updateOpportunity} className="grid gap-5 p-5 md:grid-cols-2 md:p-6">
-          <input type="hidden" name="opportunity_id" value={id} />
-          <input type="hidden" name="customer_id" value={opportunity.customer_id ?? ""} />
-          <input type="hidden" name="site_id" value={opportunity.site_id ?? ""} />
-          <label className="text-xs font-semibold">Opportunity title<input required maxLength={160} name="title" defaultValue={opportunity.title} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
-          <label className="text-xs font-semibold">Reference<input required maxLength={40} name="reference" defaultValue={opportunity.reference} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal uppercase" /></label>
-          <label className="text-xs font-semibold">Stage<select name="stage" defaultValue={opportunity.stage} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{opportunityStages.map((stage) => <option key={stage} value={stage}>{titleCase(stage)}</option>)}</select></label>
-          <label className="text-xs font-semibold">Owner<select name="owner_id" defaultValue={opportunity.owner_id ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal"><option value="">Unassigned</option>{profilesResult.data?.map((profile) => <option key={profile.id} value={profile.id}>{profile.full_name || "Unnamed user"}</option>)}</select></label>
-          <label className="text-xs font-semibold">Lead source<input name="lead_source" defaultValue={opportunity.lead_source ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
-          <label className="text-xs font-semibold">Estimated PV (kWp)<input name="estimated_pv_kwp" type="number" min="0" step="0.01" defaultValue={opportunity.estimated_pv_kwp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
-          <label className="text-xs font-semibold">Estimated battery (kWh)<input name="estimated_battery_kwh" type="number" min="0" step="0.01" defaultValue={opportunity.estimated_battery_kwh ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
-          <label className="text-xs font-semibold">Estimated value (£)<input name="estimated_value_gbp" type="number" min="0" step="0.01" defaultValue={opportunity.estimated_value_gbp ?? ""} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-transparent px-3 text-sm font-normal" /></label>
-          <label className="text-xs font-semibold md:col-span-2">Notes<textarea name="notes" rows={4} defaultValue={opportunity.notes ?? ""} className="mt-2 w-full border border-[var(--line)] bg-transparent px-3 py-3 text-sm font-normal" /></label>
-          <div className="flex justify-end md:col-span-2"><button className="min-h-11 border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)]">Save opportunity</button></div>
-        </form>
+        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Opportunity control</p><h2 className="mt-2 text-2xl font-medium">Core commercial record</h2><p className="mt-2 text-sm text-[var(--muted)]">Client-side Zod validation and React Hook Form improve operator feedback; the existing server action remains authoritative for organisation scope, relationship checks and audit logging.</p></div>
+        <OpportunityCoreForm
+          opportunityId={id}
+          customerId={opportunity.customer_id}
+          siteId={opportunity.site_id}
+          owners={profilesResult.data ?? []}
+          initialValues={coreInitialValues}
+          action={updateOpportunity}
+        />
       </section>
 
       <ReadinessGovernance opportunityId={id} items={readiness} reviewerNames={reviewerNames} />
