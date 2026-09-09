@@ -1,15 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
   type ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  type SortingState,
-  useReactTable,
+  createSortedRowModel,
+  rowSortingFeature,
+  tableFeatures,
+  useTable,
 } from "@tanstack/react-table";
 import { ArrowUpDown, ExternalLink, Search, X } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
@@ -32,6 +31,11 @@ export type OpportunityRegisterRow = {
   valueNumber: number | null;
 };
 
+const features = tableFeatures({
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+});
+
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
@@ -48,7 +52,6 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     { q: parseAsString.withDefault(""), stage: parseAsString.withDefault("") },
     { history: "push" },
   );
-  const [sorting, setSorting] = useState<SortingState>([{ id: "title", desc: false }]);
   const validStage = opportunityStages.includes(stage as (typeof opportunityStages)[number]) ? stage : "";
   const form = useForm<OpportunityFilters>({
     resolver: zodResolver(opportunityFilterSchema),
@@ -64,20 +67,20 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     });
   }, [q, rows, validStage]);
 
-  const columns = useMemo<ColumnDef<OpportunityRegisterRow>[]>(() => [
+  const columns = useMemo<ColumnDef<typeof features, OpportunityRegisterRow>[]>(() => [
     {
       accessorKey: "title",
-      header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Opportunity <ArrowUpDown className="h-3.5 w-3.5" /></Button>,
+      header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>Opportunity <ArrowUpDown className="h-3.5 w-3.5" /></Button>,
       cell: ({ row }) => <div><Link href={`/dashboard/opportunities/${row.original.id}`} className="font-semibold hover:underline">{row.original.title}</Link><p className="mt-1 text-xs text-[var(--muted)]">{row.original.reference}</p></div>,
     },
     { accessorKey: "customer", header: "Customer / Site", cell: ({ row }) => <div><p className="font-medium">{row.original.customer}</p><p className="mt-1 text-xs text-[var(--muted)]">{row.original.site}</p></div> },
     { accessorKey: "stage", header: "Stage", cell: ({ getValue }) => <span className={`inline-flex border px-2.5 py-1 text-xs font-semibold ${statusClass(String(getValue()))}`}>{titleCase(String(getValue()))}</span> },
     { accessorKey: "owner", header: "Owner", cell: ({ getValue }) => <span className="text-xs text-[var(--muted)]">{String(getValue())}</span> },
-    { accessorKey: "valueNumber", header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}>Estimated value <ArrowUpDown className="h-3.5 w-3.5" /></Button>, cell: ({ row }) => <span className="font-semibold tabular-nums">{row.original.valueLabel}</span> },
+    { accessorKey: "valueNumber", header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>Estimated value <ArrowUpDown className="h-3.5 w-3.5" /></Button>, cell: ({ row }) => <span className="font-semibold tabular-nums">{row.original.valueLabel}</span> },
     { id: "open", header: "", cell: ({ row }) => <Button asChild variant="ghost" size="icon"><Link href={`/dashboard/opportunities/${row.original.id}`} aria-label={`Open ${row.original.title}`}><ExternalLink className="h-4 w-4" /></Link></Button> },
   ], []);
 
-  const table = useReactTable({ data: filteredRows, columns, state: { sorting }, onSortingChange: setSorting, getCoreRowModel: getCoreRowModel(), getSortedRowModel: getSortedRowModel() });
+  const table = useTable({ features, data: filteredRows, columns });
 
   const applyFilters = form.handleSubmit(async (values) => {
     await setQuery({ q: values.q || null, stage: values.stage || null });
@@ -105,10 +108,10 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-left text-sm">
             <thead className="border-b border-[var(--line)] bg-black/[0.015] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              {table.getHeaderGroups().map((headerGroup) => <tr key={headerGroup.id}>{headerGroup.headers.map((header) => <th key={header.id} className="px-5 py-3 font-semibold">{header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}</th>)}</tr>)}
+              {table.getHeaderGroups().map((headerGroup) => <tr key={headerGroup.id}>{headerGroup.headers.map((header) => <th key={header.id} className="px-5 py-3 font-semibold">{header.isPlaceholder ? null : table.FlexRender(header.column.columnDef.header, header.getContext())}</th>)}</tr>)}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => <tr key={row.id} className="border-b border-[var(--line)] last:border-b-0 hover:bg-black/[0.018]">{row.getVisibleCells().map((cell) => <td key={cell.id} className="px-5 py-4 align-middle">{flexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}</tr>)}
+              {table.getRowModel().rows.map((row) => <tr key={row.id} className="border-b border-[var(--line)] last:border-b-0 hover:bg-black/[0.018]">{row.getVisibleCells().map((cell) => <td key={cell.id} className="px-5 py-4 align-middle">{table.FlexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}</tr>)}
             </tbody>
           </table>
         </div>
