@@ -3,11 +3,12 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, ExternalLink, Search, X } from "lucide-react";
 import { parseAsString, useQueryState } from "nuqs";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { DataRegister, type DataRegisterColumn } from "@/components/heliocore/data-register";
+import { DataRegister, dataRegisterFeatures } from "@/components/heliocore/data-register";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,12 +33,12 @@ function titleCase(value: string) {
 }
 
 export function CustomerRegister({ rows }: { rows: CustomerRegisterRow[] }) {
-  const [q, setQ] = useQueryState("q", parseAsString.withDefault(""), { history: "push" });
+  const [q, setQ] = useQueryState("q", parseAsString.withDefault("").withOptions({ history: "push" }));
   const form = useForm<Filters>({ resolver: zodResolver(filterSchema), values: { q } });
   const needle = q.trim().toLowerCase();
   const filteredRows = useMemo(() => rows.filter((row) => !needle || [row.name, row.classification, row.contact, row.country, row.status].some((value) => value.toLowerCase().includes(needle))), [needle, rows]);
 
-  const columns = useMemo<DataRegisterColumn<CustomerRegisterRow>[]>(() => [
+  const columns = useMemo<ColumnDef<typeof dataRegisterFeatures, CustomerRegisterRow>[]>(() => [
     { accessorKey: "name", header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>Customer <ArrowUpDown className="h-3.5 w-3.5" /></Button>, cell: ({ row }) => <div><Link href={`/dashboard/customers/${row.original.id}`} className="font-semibold hover:underline">{row.original.name}</Link><p className="mt-1 text-xs text-[var(--muted)]">{row.original.classification}</p></div> },
     { accessorKey: "contact", header: "Primary contact", cell: ({ row }) => <div><p className="text-sm">{row.original.contact}</p><p className="mt-1 text-xs text-[var(--muted)]">{row.original.country}</p></div> },
     { accessorKey: "status", header: "Status", cell: ({ getValue }) => <span className="text-xs font-semibold">{titleCase(String(getValue()))}</span> },
