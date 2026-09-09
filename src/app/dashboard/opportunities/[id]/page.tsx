@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { RecordHeader, RecordWorkspace, RecordWorkspaceSection } from "@/components/heliocore/record-workspace";
 import { createClient } from "@/lib/supabase/server";
 import type { OpportunityCoreInput } from "@/lib/schemas/opportunity";
 import { updateOpportunity } from "../actions";
@@ -75,15 +76,13 @@ export default async function OpportunityPage({ params, searchParams }: { params
   };
 
   return (
-    <div className="mx-auto max-w-[1500px]">
-      <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Pre-contract opportunity</p>
-          <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">{opportunity.title}</h1>
-          <p className="mt-4 text-sm text-[var(--muted)]">{opportunity.reference} · {customer?.display_name || customer?.name || "Customer unassigned"} · {site?.name || "Site unassigned"}</p>
-        </div>
-        <Link href="/dashboard/opportunities" className="w-fit border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Return to register</Link>
-      </header>
+    <RecordWorkspace>
+      <RecordHeader
+        eyebrow="Pre-contract opportunity"
+        title={opportunity.title}
+        meta={<>{opportunity.reference} · {customer?.display_name || customer?.name || "Customer unassigned"} · {site?.name || "Site unassigned"}</>}
+        actions={<Link href="/dashboard/opportunities" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Return to register</Link>}
+      />
 
       {query.error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{query.error}</p> : null}
       {query.created ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Opportunity created with its readiness checklist and audit record.</p> : null}
@@ -100,58 +99,33 @@ export default async function OpportunityPage({ params, searchParams }: { params
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Owner</p><p className="mt-2 text-sm font-semibold">{owner?.full_name ?? "Unassigned"}</p></div>
       </section>
 
-      <WorkflowProof
-        customerAssigned={Boolean(opportunity.customer_id)}
-        siteAssigned={Boolean(opportunity.site_id)}
-        requiredReadinessTotal={requiredReadiness.length}
-        requiredReadinessComplete={acceptedRequired}
-        proposalStatus={proposal?.status ?? null}
-        opportunityStage={opportunity.stage}
-      />
+      <WorkflowProof customerAssigned={Boolean(opportunity.customer_id)} siteAssigned={Boolean(opportunity.site_id)} requiredReadinessTotal={requiredReadiness.length} requiredReadinessComplete={acceptedRequired} proposalStatus={proposal?.status ?? null} opportunityStage={opportunity.stage} />
 
-      <section className="mt-7 border border-[var(--line)]">
-        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Relationship control</p><h2 className="mt-2 text-2xl font-medium">Customer and Site assignment</h2><p className="mt-2 text-sm text-[var(--muted)]">Assign governed records after intake. Site choices are filtered by Customer and conflicts are blocked server-side.</p></div>
+      <RecordWorkspaceSection eyebrow="Relationship control" title="Customer and Site assignment" description="Assign governed records after intake. Site choices are filtered by Customer and conflicts are blocked server-side.">
         <RelationshipAssignment opportunityId={id} initialCustomerId={opportunity.customer_id} initialSiteId={opportunity.site_id} customers={customersResult.data ?? []} sites={sitesResult.data ?? []} />
-      </section>
+      </RecordWorkspaceSection>
 
-      <section className="mt-7 border border-[var(--line)]">
-        <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Opportunity control</p><h2 className="mt-2 text-2xl font-medium">Core commercial record</h2><p className="mt-2 text-sm text-[var(--muted)]">Client-side Zod validation and React Hook Form improve operator feedback; the existing server action remains authoritative for organisation scope, relationship checks and audit logging.</p></div>
+      <RecordWorkspaceSection eyebrow="Opportunity control" title="Core commercial record" description="Client-side Zod validation and React Hook Form improve operator feedback; the existing server action remains authoritative for organisation scope, relationship checks and audit logging.">
         <OpportunityCoreForm opportunityId={id} customerId={opportunity.customer_id} siteId={opportunity.site_id} owners={profilesResult.data ?? []} initialValues={coreInitialValues} action={updateOpportunity} />
-      </section>
+      </RecordWorkspaceSection>
 
       <ReadinessGovernance opportunityId={id} items={readiness} reviewerNames={reviewerNames} />
       <SiteSurveyGovernance opportunityId={id} siteId={opportunity.site_id} opportunityReference={opportunity.reference} survey={survey} />
 
-      <section className="mt-7 border border-[var(--line)]">
-        <div className="border-b border-[var(--line)] p-5 md:flex md:items-end md:justify-between md:gap-6">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Engineering handoff</p>
-            <h2 className="mt-2 text-2xl font-medium">Calculator-led engineering</h2>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-[var(--muted)]">System Type → Load Profile → Calculator → Equipment Selection → Detailed Design → PVWatts → SLD + BOM → Engineering Review.</p>
-          </div>
-          <Link href={engineeringHref} className="mt-4 inline-flex min-h-11 shrink-0 items-center justify-center border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)] md:mt-0">
-            {!engineering ? "Start engineering" : engineering.status === "ready" ? "Open Calculator" : "Continue Load Profile"}
-          </Link>
-        </div>
+      <RecordWorkspaceSection
+        eyebrow="Engineering handoff"
+        title="Calculator-led engineering"
+        description="System Type → Load Profile → Calculator → Equipment Selection → Detailed Design → PVWatts → SLD + BOM → Engineering Review."
+        action={<Link href={engineeringHref} className="inline-flex min-h-11 items-center justify-center border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)]">{!engineering ? "Start engineering" : engineering.status === "ready" ? "Open Calculator" : "Continue Load Profile"}</Link>}
+      >
         <div className="grid gap-px bg-[var(--line)] sm:grid-cols-3">
           <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Current engineering stage</p><p className="mt-2 text-lg font-semibold">{engineeringStage}</p></div>
           <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">System Type</p><p className="mt-2 text-lg font-semibold">{engineering?.system_type ? titleCase(engineering.system_type) : "Not selected"}</p></div>
           <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Project state</p><p className="mt-2 text-lg font-semibold text-[var(--muted)]">Not created pre-contract</p></div>
         </div>
-      </section>
+      </RecordWorkspaceSection>
 
-      <ProposalGovernance
-        opportunityId={id}
-        opportunityReference={opportunity.reference}
-        customerAssigned={Boolean(opportunity.customer_id)}
-        siteAssigned={Boolean(opportunity.site_id)}
-        readinessTotal={requiredReadiness.length}
-        readinessComplete={acceptedRequired}
-        proposal={proposal}
-        estimatedPv={opportunity.estimated_pv_kwp}
-        estimatedBattery={opportunity.estimated_battery_kwh}
-        estimatedValue={opportunity.estimated_value_gbp}
-      />
-    </div>
+      <ProposalGovernance opportunityId={id} opportunityReference={opportunity.reference} customerAssigned={Boolean(opportunity.customer_id)} siteAssigned={Boolean(opportunity.site_id)} readinessTotal={requiredReadiness.length} readinessComplete={acceptedRequired} proposal={proposal} estimatedPv={opportunity.estimated_pv_kwp} estimatedBattery={opportunity.estimated_battery_kwh} estimatedValue={opportunity.estimated_value_gbp} />
+    </RecordWorkspace>
   );
 }
