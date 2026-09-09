@@ -14,13 +14,11 @@ const navigation = [
     ],
   },
   {
-    label: "Pre-contract",
+    label: "Commercial intake",
     items: [
       { href: "/dashboard/opportunities", label: "Opportunities" },
       { href: "/dashboard/customers", label: "Customers" },
       { href: "/dashboard/sites", label: "Sites" },
-      { href: "/dashboard/proposals", label: "Proposals" },
-      { href: "/dashboard/contracts", label: "Contracts" },
     ],
   },
   {
@@ -33,6 +31,14 @@ const navigation = [
       { href: "/dashboard/drawings", label: "Drawings" },
       { href: "/dashboard/boms", label: "BOMs" },
       { href: "/dashboard/engineering/equipment", label: "Equipment library" },
+    ],
+  },
+  {
+    label: "Commercial close",
+    items: [
+      { href: "/dashboard/costing", label: "Costing" },
+      { href: "/dashboard/proposals", label: "Proposals" },
+      { href: "/dashboard/contracts", label: "Contracts" },
     ],
   },
   {
@@ -66,10 +72,9 @@ const navigation = [
     ],
   },
   {
-    label: "Commercial & finance",
+    label: "Finance",
     items: [
       { href: "/dashboard/budgets", label: "Project budgets" },
-      { href: "/dashboard/costing", label: "Costing" },
       { href: "/dashboard/supplier-invoices", label: "Supplier invoices / AP" },
       { href: "/dashboard/customer-invoices", label: "Customer invoices / AR" },
       { href: "/dashboard/payments", label: "Payments" },
@@ -144,15 +149,16 @@ const routeLabels: Record<string, string> = {
 const sectionLabels: Record<string, string> = {
   tasks: "Command",
   approvals: "Command",
-  opportunities: "Pre-contract",
-  customers: "Pre-contract",
-  sites: "Pre-contract",
-  proposals: "Pre-contract",
-  contracts: "Pre-contract",
+  opportunities: "Commercial intake",
+  customers: "Commercial intake",
+  sites: "Commercial intake",
   engineering: "Engineering",
   designs: "Engineering",
   drawings: "Engineering",
   boms: "Engineering",
+  costing: "Commercial close",
+  proposals: "Commercial close",
+  contracts: "Commercial close",
   requisitions: "Procurement",
   rfqs: "Procurement",
   "vendor-comparisons": "Procurement",
@@ -168,11 +174,10 @@ const sectionLabels: Record<string, string> = {
   quality: "Project execution",
   commissioning: "Project execution",
   handover: "Project execution",
-  budgets: "Commercial & finance",
-  costing: "Commercial & finance",
-  "supplier-invoices": "Commercial & finance",
-  "customer-invoices": "Commercial & finance",
-  payments: "Commercial & finance",
+  budgets: "Finance",
+  "supplier-invoices": "Finance",
+  "customer-invoices": "Finance",
+  payments: "Finance",
   assets: "Operations",
   om: "Operations",
   "service-maintenance": "Operations",
@@ -327,7 +332,7 @@ export function WorkspaceShell({ children, userName, userRole, organisationName,
             </div>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-[var(--muted)]">
-            <span className="hidden sm:inline">Opportunity → Engineering → Contract → Project → Delivery → O&M</span>
+            <span className="hidden sm:inline">Opportunity → Engineering → Proposal → Contract → Project → Procurement → Delivery → O&M</span>
             <span className="h-4 w-px bg-[var(--line)]" />
             <span className="font-semibold text-[var(--foreground)]">{initials}</span>
           </div>
