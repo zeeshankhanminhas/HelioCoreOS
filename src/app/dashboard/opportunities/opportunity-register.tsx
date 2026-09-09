@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
+import type { ColumnDef } from "@tanstack/react-table";
 import { ArrowUpDown, ExternalLink, Search, X } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useForm } from "react-hook-form";
-import { DataRegister, type DataRegisterColumn } from "@/components/heliocore/data-register";
+import { DataRegister, dataRegisterFeatures } from "@/components/heliocore/data-register";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -56,7 +57,7 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     });
   }, [q, rows, validStage]);
 
-  const columns = useMemo<DataRegisterColumn<OpportunityRegisterRow>[]>(() => [
+  const columns = useMemo<ColumnDef<typeof dataRegisterFeatures, OpportunityRegisterRow>[]>(() => [
     {
       accessorKey: "title",
       header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>Opportunity <ArrowUpDown className="h-3.5 w-3.5" /></Button>,
