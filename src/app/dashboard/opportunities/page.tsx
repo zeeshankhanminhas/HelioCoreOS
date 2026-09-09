@@ -60,21 +60,20 @@ export default async function OpportunitiesPage() {
   return (
     <div className="mx-auto max-w-[1500px]">
       <PageHeader
-        eyebrow="Commercial pipeline"
+        eyebrow="Sales"
         title="Opportunities"
-        description="A governed register of enquiries that can carry Site, Load, Engineering, Design, BOM, Costing and Proposal work before contract conversion."
-        primaryAction={<Button asChild><Link href="/dashboard/opportunities/new">Create opportunity</Link></Button>}
+        primaryAction={<Button asChild><Link href="/dashboard/opportunities/new">New opportunity</Link></Button>}
       />
 
       <MetricStrip items={[
-        { label: "Pipeline value", value: singleCurrency ? formatMoney(pipelineValue, singleCurrency) : "Multiple currencies", detail: `${records.length} total records` },
-        { label: "Open opportunities", value: openCount, detail: "Excludes won and lost" },
-        { label: "In proposal", value: proposalCount, detail: "Commercial decision stage", emphasis: proposalCount ? "warning" : "default" },
-        { label: "Won", value: wonCount, detail: "Ready for contract-gated conversion", emphasis: wonCount ? "positive" : "default" },
+        { label: "Pipeline value", value: singleCurrency ? formatMoney(pipelineValue, singleCurrency) : "Multiple currencies", detail: `${records.length} records` },
+        { label: "Open", value: openCount },
+        { label: "Proposal", value: proposalCount, emphasis: proposalCount ? "warning" : "default" },
+        { label: "Won", value: wonCount, emphasis: wonCount ? "positive" : "default" },
       ]} />
 
       {error ? (
-        <div className="mt-7 border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-800">The opportunity register could not be loaded. Refresh the page before making commercial decisions.</div>
+        <div className="mt-7 border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-800">Opportunities could not be loaded.</div>
       ) : (
         <OpportunityRegister rows={rows} />
       )}
