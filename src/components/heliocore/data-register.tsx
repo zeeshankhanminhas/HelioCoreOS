@@ -14,12 +14,12 @@ export const dataRegisterFeatures = tableFeatures({
   sortedRowModel: createSortedRowModel(),
 });
 
-export type DataRegisterColumn<TData> = ColumnDef<typeof dataRegisterFeatures, TData>;
+type RegisterRow = { id: string };
 
-type Props<TData extends { id: string }> = {
+type Props = {
   registerKey: string;
-  rows: TData[];
-  columns: DataRegisterColumn<TData>[];
+  rows: RegisterRow[];
+  columns: unknown[];
   caption: string;
   emptyState: ReactNode;
   errorState?: ReactNode;
@@ -27,7 +27,7 @@ type Props<TData extends { id: string }> = {
   minWidthClassName?: string;
 };
 
-export function DataRegister<TData extends { id: string }>({
+export function DataRegister({
   registerKey,
   rows,
   columns,
@@ -36,8 +36,9 @@ export function DataRegister<TData extends { id: string }>({
   errorState,
   hasError = false,
   minWidthClassName = "min-w-[900px]",
-}: Props<TData>) {
-  const table = useTable({ key: registerKey, features: dataRegisterFeatures, data: rows, columns });
+}: Props) {
+  const typedColumns = columns as ColumnDef<typeof dataRegisterFeatures, RegisterRow>[];
+  const table = useTable({ key: registerKey, features: dataRegisterFeatures, data: rows, columns: typedColumns });
 
   if (hasError) {
     return <div className="border border-[var(--line)] px-6 py-20 text-center">{errorState}</div>;
