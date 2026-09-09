@@ -80,7 +80,7 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     { id: "open", header: "", cell: ({ row }) => <Button asChild variant="ghost" size="icon"><Link href={`/dashboard/opportunities/${row.original.id}`} aria-label={`Open ${row.original.title}`}><ExternalLink className="h-4 w-4" /></Link></Button> },
   ], []);
 
-  const table = useTable({ features, data: filteredRows, columns });
+  const table = useTable({ key: "opportunities-register", features, data: filteredRows, columns });
 
   const applyFilters = form.handleSubmit(async (values) => {
     await setQuery({ q: values.q || null, stage: values.stage || null });
@@ -108,10 +108,10 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] border-collapse text-left text-sm">
             <thead className="border-b border-[var(--line)] bg-black/[0.015] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              {table.getHeaderGroups().map((headerGroup) => <tr key={headerGroup.id}>{headerGroup.headers.map((header) => <th key={header.id} className="px-5 py-3 font-semibold">{header.isPlaceholder ? null : table.FlexRender(header.column.columnDef.header, header.getContext())}</th>)}</tr>)}
+              {table.getHeaderGroups().map((headerGroup) => <tr key={headerGroup.id}>{headerGroup.headers.map((header) => <th key={header.id} className="px-5 py-3 font-semibold">{header.isPlaceholder ? null : <table.FlexRender header={header} />}</th>)}</tr>)}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row) => <tr key={row.id} className="border-b border-[var(--line)] last:border-b-0 hover:bg-black/[0.018]">{row.getVisibleCells().map((cell) => <td key={cell.id} className="px-5 py-4 align-middle">{table.FlexRender(cell.column.columnDef.cell, cell.getContext())}</td>)}</tr>)}
+              {table.getRowModel().rows.map((row) => <tr key={row.id} className="border-b border-[var(--line)] last:border-b-0 hover:bg-black/[0.018]">{row.getAllCells().map((cell) => <td key={cell.id} className="px-5 py-4 align-middle"><table.FlexRender cell={cell} /></td>)}</tr>)}
             </tbody>
           </table>
         </div>
