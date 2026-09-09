@@ -39,18 +39,17 @@ export default async function DesignsPage() {
       arrayKwp: design.array_capacity_kwp == null ? null : Number(design.array_capacity_kwp),
       inverterKw: design.inverter_capacity_kw == null ? null : Number(design.inverter_capacity_kw),
       batteryKwh: design.battery_capacity_kwh == null ? null : Number(design.battery_capacity_kwh),
-      calculatorRevision: calcRevision ? `Calculator R${calcRevision}` : design.calculator_revision_id ? "Linked calculator revision" : "Legacy / manual basis",
+      calculatorRevision: calcRevision ? `Calculator R${calcRevision}` : design.calculator_revision_id ? "Calculator linked" : "Manual basis",
       updatedAt: design.updated_at,
     };
   });
 
   return <div className="mx-auto max-w-[1600px]">
     <header className="border-b border-[var(--line)] pb-7">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Engineering control</p>
-      <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">Design register</h1>
-      <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--muted)]">Controlled design revisions derived from Opportunity engineering. Approved designs become the technical baseline for BOM release and downstream commercial/procurement work.</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Engineering</p>
+      <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">Designs</h1>
     </header>
-    {error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">Design records could not be loaded. Refresh before making engineering decisions.</p> : null}
+    {error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">Designs could not be loaded.</p> : null}
     <DesignRegister rows={rows} />
   </div>;
 }
