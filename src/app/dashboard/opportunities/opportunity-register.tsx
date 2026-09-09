@@ -3,16 +3,10 @@
 import Link from "next/link";
 import { useMemo } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import {
-  type ColumnDef,
-  createSortedRowModel,
-  rowSortingFeature,
-  tableFeatures,
-  useTable,
-} from "@tanstack/react-table";
 import { ArrowUpDown, ExternalLink, Search, X } from "lucide-react";
 import { parseAsString, useQueryStates } from "nuqs";
 import { useForm } from "react-hook-form";
+import { DataRegister, type DataRegisterColumn } from "@/components/heliocore/data-register";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -30,11 +24,6 @@ export type OpportunityRegisterRow = {
   valueLabel: string;
   valueNumber: number | null;
 };
-
-const features = tableFeatures({
-  rowSortingFeature,
-  sortedRowModel: createSortedRowModel(),
-});
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
@@ -67,7 +56,7 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     });
   }, [q, rows, validStage]);
 
-  const columns = useMemo<ColumnDef<typeof features, OpportunityRegisterRow>[]>(() => [
+  const columns = useMemo<DataRegisterColumn<OpportunityRegisterRow>[]>(() => [
     {
       accessorKey: "title",
       header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>Opportunity <ArrowUpDown className="h-3.5 w-3.5" /></Button>,
@@ -80,8 +69,6 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     { id: "open", header: "", cell: ({ row }) => <Button asChild variant="ghost" size="icon"><Link href={`/dashboard/opportunities/${row.original.id}`} aria-label={`Open ${row.original.title}`}><ExternalLink className="h-4 w-4" /></Link></Button> },
   ], []);
 
-  const table = useTable({ key: "opportunities-register", features, data: filteredRows, columns });
-
   const applyFilters = form.handleSubmit(async (values) => {
     await setQuery({ q: values.q || null, stage: values.stage || null });
   });
@@ -92,32 +79,23 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
   };
 
   return (
-    <section className="mt-7 border border-[var(--line)] bg-[var(--background)]" aria-label="Opportunity register">
-      <form onSubmit={applyFilters} className="grid gap-4 border-b border-[var(--line)] p-4 md:grid-cols-[minmax(240px,1fr)_220px_auto] md:items-end">
+    <section className="mt-7 bg-[var(--background)]" aria-label="Opportunity register">
+      <form onSubmit={applyFilters} className="grid gap-4 border border-[var(--line)] p-4 md:grid-cols-[minmax(240px,1fr)_220px_auto] md:items-end">
         <div><Label htmlFor="opportunity-search">Search</Label><div className="relative mt-2"><Search aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--muted)]" /><Input id="opportunity-search" className="pl-9" placeholder="Title, reference, customer, site or owner" {...form.register("q")} /></div></div>
         <div><Label htmlFor="opportunity-stage">Stage</Label><NativeSelect id="opportunity-stage" className="mt-2" {...form.register("stage")}><option value="">All stages</option>{opportunityStages.map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}</NativeSelect></div>
         <div className="flex gap-2"><Button type="submit" variant="outline">Apply filters</Button>{q || validStage ? <Button type="button" variant="ghost" onClick={clearFilters}><X className="h-4 w-4" />Clear</Button> : null}</div>
       </form>
-
-      <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)]">
+      <div className="flex items-center justify-between border-x border-b border-[var(--line)] px-5 py-3 text-xs text-[var(--muted)]">
         <span>{filteredRows.length} matching {filteredRows.length === 1 ? "opportunity" : "opportunities"}</span>
         <span>URL-persisted filters · sortable register</span>
       </div>
-
-      {filteredRows.length ? (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[900px] border-collapse text-left text-sm">
-            <thead className="border-b border-[var(--line)] bg-black/[0.015] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--muted)]">
-              {table.getHeaderGroups().map((headerGroup) => <tr key={headerGroup.id}>{headerGroup.headers.map((header) => <th key={header.id} className="px-5 py-3 font-semibold">{header.isPlaceholder ? null : <table.FlexRender header={header} />}</th>)}</tr>)}
-            </thead>
-            <tbody>
-              {table.getRowModel().rows.map((row) => <tr key={row.id} className="border-b border-[var(--line)] last:border-b-0 hover:bg-black/[0.018]">{row.getAllCells().map((cell) => <td key={cell.id} className="px-5 py-4 align-middle"><table.FlexRender cell={cell} /></td>)}</tr>)}
-            </tbody>
-          </table>
-        </div>
-      ) : (
-        <div className="px-6 py-20 text-center"><p className="text-sm font-semibold">No matching opportunities</p><p className="mt-2 text-sm text-[var(--muted)]">Adjust the search or stage filter.</p></div>
-      )}
+      <DataRegister
+        registerKey="opportunities-register"
+        rows={filteredRows}
+        columns={columns}
+        caption="Opportunity register"
+        emptyState={<><p className="text-sm font-semibold">No matching opportunities</p><p className="mt-2 text-sm text-[var(--muted)]">Adjust the search or stage filter.</p></>}
+      />
     </section>
   );
 }
