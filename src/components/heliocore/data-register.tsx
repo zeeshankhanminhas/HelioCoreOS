@@ -17,6 +17,7 @@ export const dataRegisterFeatures = tableFeatures({
 export type DataRegisterColumn<TData> = ColumnDef<typeof dataRegisterFeatures, TData>;
 
 type Props<TData extends { id: string }> = {
+  registerKey: string;
   rows: TData[];
   columns: DataRegisterColumn<TData>[];
   caption: string;
@@ -27,6 +28,7 @@ type Props<TData extends { id: string }> = {
 };
 
 export function DataRegister<TData extends { id: string }>({
+  registerKey,
   rows,
   columns,
   caption,
@@ -35,7 +37,7 @@ export function DataRegister<TData extends { id: string }>({
   hasError = false,
   minWidthClassName = "min-w-[900px]",
 }: Props<TData>) {
-  const table = useTable({ features: dataRegisterFeatures, data: rows, columns });
+  const table = useTable({ key: registerKey, features: dataRegisterFeatures, data: rows, columns });
 
   if (hasError) {
     return <div className="border border-[var(--line)] px-6 py-20 text-center">{errorState}</div>;
@@ -54,7 +56,7 @@ export function DataRegister<TData extends { id: string }>({
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <th key={header.id} className="px-5 py-3 font-semibold">
-                  {header.isPlaceholder ? null : table.FlexRender(header.column.columnDef.header)}
+                  {header.isPlaceholder ? null : <table.FlexRender header={header} />}
                 </th>
               ))}
             </tr>
@@ -63,9 +65,9 @@ export function DataRegister<TData extends { id: string }>({
         <tbody>
           {table.getRowModel().rows.map((row) => (
             <tr key={row.id} className="border-b border-[var(--line)] last:border-b-0 hover:bg-black/[0.018]">
-              {row.getCells().map((cell) => (
+              {row.getAllCells().map((cell) => (
                 <td key={cell.id} className="px-5 py-4 align-middle">
-                  {table.FlexRender(cell.column.columnDef.cell)}
+                  <table.FlexRender cell={cell} />
                 </td>
               ))}
             </tr>
