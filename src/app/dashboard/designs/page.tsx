@@ -11,6 +11,13 @@ function relationName(value: unknown, fallback: string) {
   return fallback;
 }
 
+function relationField(value: unknown, key: string): string | null {
+  const item = Array.isArray(value) ? value[0] : value;
+  if (!item || typeof item !== "object") return null;
+  const field = (item as Record<string, unknown>)[key];
+  return field == null ? null : String(field);
+}
+
 export default async function DesignsPage() {
   const supabase = await createClient();
   const { data: designs, error } = await supabase
@@ -19,9 +26,9 @@ export default async function DesignsPage() {
     .order("updated_at", { ascending: false });
 
   const rows: DesignRegisterRow[] = (designs ?? []).map((design) => {
-    const calc = Array.isArray(design.engineering_calculations) ? design.engineering_calculations[0] : design.engineering_calculations;
+    const calcRevision = relationField(design.engineering_calculations, "revision");
     const siteName = relationName(design.sites, "Site");
-    const sitePostcode = Array.isArray(design.sites) ? design.sites[0]?.postcode : design.sites?.postcode;
+    const sitePostcode = relationField(design.sites, "postcode");
     return {
       id: design.id,
       reference: design.design_reference,
@@ -32,7 +39,7 @@ export default async function DesignsPage() {
       arrayKwp: design.array_capacity_kwp == null ? null : Number(design.array_capacity_kwp),
       inverterKw: design.inverter_capacity_kw == null ? null : Number(design.inverter_capacity_kw),
       batteryKwh: design.battery_capacity_kwh == null ? null : Number(design.battery_capacity_kwh),
-      calculatorRevision: calc?.revision ? `Calculator R${calc.revision}` : design.calculator_revision_id ? "Linked calculator revision" : "Legacy / manual basis",
+      calculatorRevision: calcRevision ? `Calculator R${calcRevision}` : design.calculator_revision_id ? "Linked calculator revision" : "Legacy / manual basis",
       updatedAt: design.updated_at,
     };
   });
