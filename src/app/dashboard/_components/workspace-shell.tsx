@@ -5,37 +5,181 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const navigation = [
-  { label: "Command", items: [{ href: "/dashboard", label: "Overview" }, { href: "/dashboard/tasks", label: "Tasks" }] },
-  { label: "Pre-contract", items: [{ href: "/dashboard/opportunities", label: "Opportunities" }, { href: "/dashboard/customers", label: "Customers" }, { href: "/dashboard/sites", label: "Sites" }] },
-  { label: "Engineering", items: [{ href: "/dashboard/engineering", label: "Engineering" }, { href: "/dashboard/engineering/equipment", label: "Equipment library" }] },
-  { label: "Delivery", items: [{ href: "/dashboard/projects", label: "Projects" }] },
-  { label: "Administration", items: [{ href: "/dashboard/team", label: "Team & access" }] },
+  {
+    label: "Command",
+    items: [
+      { href: "/dashboard", label: "Overview" },
+      { href: "/dashboard/tasks", label: "Tasks" },
+      { href: "/dashboard/approvals", label: "Approvals" },
+    ],
+  },
+  {
+    label: "Pre-contract",
+    items: [
+      { href: "/dashboard/opportunities", label: "Opportunities" },
+      { href: "/dashboard/customers", label: "Customers" },
+      { href: "/dashboard/sites", label: "Sites" },
+      { href: "/dashboard/proposals", label: "Proposals" },
+      { href: "/dashboard/contracts", label: "Contracts" },
+    ],
+  },
+  {
+    label: "Engineering",
+    items: [
+      { href: "/dashboard/engineering", label: "Engineering workspace" },
+      { href: "/dashboard/engineering/load-profiles", label: "Load profiles" },
+      { href: "/dashboard/engineering/calculators", label: "Calculators" },
+      { href: "/dashboard/designs", label: "Designs" },
+      { href: "/dashboard/drawings", label: "Drawings" },
+      { href: "/dashboard/boms", label: "BOMs" },
+      { href: "/dashboard/engineering/equipment", label: "Equipment library" },
+    ],
+  },
+  {
+    label: "Procurement",
+    items: [
+      { href: "/dashboard/requisitions", label: "Purchase requisitions" },
+      { href: "/dashboard/rfqs", label: "RFQs" },
+      { href: "/dashboard/vendor-comparisons", label: "Vendor comparisons" },
+      { href: "/dashboard/purchase-orders", label: "Purchase orders" },
+      { href: "/dashboard/suppliers", label: "Suppliers" },
+    ],
+  },
+  {
+    label: "Logistics & inventory",
+    items: [
+      { href: "/dashboard/shipments", label: "Shipments" },
+      { href: "/dashboard/grn", label: "Delivery & GRN" },
+      { href: "/dashboard/warehouses", label: "Warehouses" },
+      { href: "/dashboard/site-stock", label: "Site stock" },
+      { href: "/dashboard/material-movements", label: "Material movements" },
+    ],
+  },
+  {
+    label: "Project execution",
+    items: [
+      { href: "/dashboard/projects", label: "Projects" },
+      { href: "/dashboard/construction", label: "Construction" },
+      { href: "/dashboard/quality", label: "HSE & quality" },
+      { href: "/dashboard/commissioning", label: "Commissioning" },
+      { href: "/dashboard/handover", label: "Handover" },
+    ],
+  },
+  {
+    label: "Commercial & finance",
+    items: [
+      { href: "/dashboard/budgets", label: "Project budgets" },
+      { href: "/dashboard/costing", label: "Costing" },
+      { href: "/dashboard/supplier-invoices", label: "Supplier invoices / AP" },
+      { href: "/dashboard/customer-invoices", label: "Customer invoices / AR" },
+      { href: "/dashboard/payments", label: "Payments" },
+    ],
+  },
+  {
+    label: "Operations",
+    items: [
+      { href: "/dashboard/assets", label: "Assets" },
+      { href: "/dashboard/om", label: "O&M" },
+      { href: "/dashboard/service-maintenance", label: "Service & maintenance" },
+    ],
+  },
+  {
+    label: "Governance",
+    items: [
+      { href: "/dashboard/documents", label: "Documents" },
+      { href: "/dashboard/reports", label: "Reports & analytics" },
+      { href: "/dashboard/team", label: "People & workforce" },
+      { href: "/dashboard/settings", label: "Settings" },
+    ],
+  },
 ];
 
 const routeLabels: Record<string, string> = {
   dashboard: "Dashboard",
   tasks: "Tasks",
+  approvals: "Approvals",
   opportunities: "Opportunities",
   customers: "Customers",
   sites: "Sites",
+  proposals: "Proposals",
+  contracts: "Contracts",
   projects: "Projects",
   engineering: "Engineering",
   equipment: "Equipment library",
-  calculators: "Calculator",
-  "load-profiles": "Load Profile",
-  team: "Team & access",
+  calculators: "Calculators",
+  "load-profiles": "Load profiles",
+  designs: "Designs",
+  drawings: "Drawings",
+  boms: "BOMs",
+  requisitions: "Purchase requisitions",
+  rfqs: "RFQs",
+  "vendor-comparisons": "Vendor comparisons",
+  "purchase-orders": "Purchase orders",
+  suppliers: "Suppliers",
+  shipments: "Shipments",
+  grn: "Delivery & GRN",
+  warehouses: "Warehouses",
+  "site-stock": "Site stock",
+  "material-movements": "Material movements",
+  construction: "Construction",
+  quality: "HSE & quality",
+  commissioning: "Commissioning",
+  handover: "Handover",
+  budgets: "Project budgets",
+  costing: "Costing",
+  "supplier-invoices": "Supplier invoices / AP",
+  "customer-invoices": "Customer invoices / AR",
+  payments: "Payments",
+  assets: "Assets",
+  om: "O&M",
+  "service-maintenance": "Service & maintenance",
+  documents: "Documents",
+  reports: "Reports & analytics",
+  team: "People & workforce",
+  settings: "Settings",
   new: "Create",
   edit: "Edit",
 };
 
 const sectionLabels: Record<string, string> = {
   tasks: "Command",
+  approvals: "Command",
   opportunities: "Pre-contract",
   customers: "Pre-contract",
   sites: "Pre-contract",
+  proposals: "Pre-contract",
+  contracts: "Pre-contract",
   engineering: "Engineering",
-  projects: "Delivery",
-  team: "Administration",
+  designs: "Engineering",
+  drawings: "Engineering",
+  boms: "Engineering",
+  requisitions: "Procurement",
+  rfqs: "Procurement",
+  "vendor-comparisons": "Procurement",
+  "purchase-orders": "Procurement",
+  suppliers: "Procurement",
+  shipments: "Logistics & inventory",
+  grn: "Logistics & inventory",
+  warehouses: "Logistics & inventory",
+  "site-stock": "Logistics & inventory",
+  "material-movements": "Logistics & inventory",
+  projects: "Project execution",
+  construction: "Project execution",
+  quality: "Project execution",
+  commissioning: "Project execution",
+  handover: "Project execution",
+  budgets: "Commercial & finance",
+  costing: "Commercial & finance",
+  "supplier-invoices": "Commercial & finance",
+  "customer-invoices": "Commercial & finance",
+  payments: "Commercial & finance",
+  assets: "Operations",
+  om: "Operations",
+  "service-maintenance": "Operations",
+  documents: "Governance",
+  reports: "Governance",
+  team: "Governance",
+  settings: "Governance",
 };
 
 const focus = "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2";
@@ -179,11 +323,11 @@ export function WorkspaceShell({ children, userName, userRole, organisationName,
             <button onClick={() => setMobileOpen(true)} className={`border border-[var(--line)] px-2.5 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] lg:hidden ${focus}`}>Menu</button>
             <div className="min-w-0">
               <p className="truncate text-[11px] font-semibold text-[var(--foreground)]">{organisationName}</p>
-              <p className="mt-0.5 text-[9px] uppercase tracking-[0.13em] text-[var(--muted)]">Engineering operations</p>
+              <p className="mt-0.5 text-[9px] uppercase tracking-[0.13em] text-[var(--muted)]">Solar EPC operating system</p>
             </div>
           </div>
           <div className="flex items-center gap-3 text-[10px] text-[var(--muted)]">
-            <span className="hidden sm:inline">Pre-contract → Engineering → Contract → Delivery</span>
+            <span className="hidden sm:inline">Opportunity → Engineering → Contract → Project → Delivery → O&M</span>
             <span className="h-4 w-px bg-[var(--line)]" />
             <span className="font-semibold text-[var(--foreground)]">{initials}</span>
           </div>
