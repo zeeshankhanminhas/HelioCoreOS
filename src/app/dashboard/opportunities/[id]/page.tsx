@@ -68,9 +68,9 @@ export default async function OpportunityPage({ params, searchParams }: { params
     stage: opportunity.stage as OpportunityCoreInput["stage"],
     owner_id: opportunity.owner_id ?? "",
     lead_source: opportunity.lead_source ?? "",
-    estimated_pv_kwp: opportunity.estimated_pv_kwp == null ? undefined : Number(opportunity.estimated_pv_kwp),
-    estimated_battery_kwh: opportunity.estimated_battery_kwh == null ? undefined : Number(opportunity.estimated_battery_kwh),
-    estimated_value_gbp: opportunity.estimated_value_gbp == null ? undefined : Number(opportunity.estimated_value_gbp),
+    estimated_pv_kwp: opportunity.estimated_pv_kwp == null ? "" : String(opportunity.estimated_pv_kwp),
+    estimated_battery_kwh: opportunity.estimated_battery_kwh == null ? "" : String(opportunity.estimated_battery_kwh),
+    estimated_value_gbp: opportunity.estimated_value_gbp == null ? "" : String(opportunity.estimated_value_gbp),
     notes: opportunity.notes ?? "",
   };
 
@@ -116,18 +116,10 @@ export default async function OpportunityPage({ params, searchParams }: { params
 
       <section className="mt-7 border border-[var(--line)]">
         <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Opportunity control</p><h2 className="mt-2 text-2xl font-medium">Core commercial record</h2><p className="mt-2 text-sm text-[var(--muted)]">Client-side Zod validation and React Hook Form improve operator feedback; the existing server action remains authoritative for organisation scope, relationship checks and audit logging.</p></div>
-        <OpportunityCoreForm
-          opportunityId={id}
-          customerId={opportunity.customer_id}
-          siteId={opportunity.site_id}
-          owners={profilesResult.data ?? []}
-          initialValues={coreInitialValues}
-          action={updateOpportunity}
-        />
+        <OpportunityCoreForm opportunityId={id} customerId={opportunity.customer_id} siteId={opportunity.site_id} owners={profilesResult.data ?? []} initialValues={coreInitialValues} action={updateOpportunity} />
       </section>
 
       <ReadinessGovernance opportunityId={id} items={readiness} reviewerNames={reviewerNames} />
-
       <SiteSurveyGovernance opportunityId={id} siteId={opportunity.site_id} opportunityReference={opportunity.reference} survey={survey} />
 
       <section className="mt-7 border border-[var(--line)]">
