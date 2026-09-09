@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RecordHeader, RecordWorkspace, RecordWorkspaceSection } from "@/components/heliocore/record-workspace";
 
+type BomLine = Record<string, unknown>;
+
 function relationName(value: unknown, fallback: string) {
   if (!value) return fallback;
   if (Array.isArray(value)) return relationName(value[0], fallback);
@@ -35,7 +37,9 @@ export default async function DesignPage({ params }: { params: Promise<{ id: str
   const postcode = field(design.sites, "postcode");
   const calcRevision = field(design.engineering_calculations, "revision");
   const calcEngine = field(design.engineering_calculations, "engine_version");
-  const bom = Array.isArray(design.bom_snapshot) ? design.bom_snapshot : [];
+  const bom: BomLine[] = Array.isArray(design.bom_snapshot)
+    ? design.bom_snapshot.filter((line: unknown): line is BomLine => Boolean(line) && typeof line === "object" && !Array.isArray(line))
+    : [];
   const performance = design.performance_snapshot && typeof design.performance_snapshot === "object" ? design.performance_snapshot as Record<string, unknown> : {};
 
   return <RecordWorkspace>
@@ -74,7 +78,7 @@ export default async function DesignPage({ params }: { params: Promise<{ id: str
     </RecordWorkspaceSection>
 
     <RecordWorkspaceSection eyebrow="Materials baseline" title="Design BOM" description={design.status === "approved" ? "Approved design. This BOM can become the controlled source for procurement release." : "Not yet released for procurement. Complete engineering review and approval first."}>
-      {bom.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead className="border-b border-[var(--line)] bg-black/[0.015] text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]"><tr><th className="px-5 py-3">Item</th><th className="px-5 py-3">Category</th><th className="px-5 py-3">Quantity</th><th className="px-5 py-3">Status / note</th></tr></thead><tbody>{bom.map((line, index) => { const item = line && typeof line === "object" ? line as Record<string, unknown> : {}; return <tr key={index} className="border-b border-[var(--line)]"><td className="px-5 py-4 font-medium">{String(item.description ?? item.name ?? item.item ?? `BOM line ${index + 1}`)}</td><td className="px-5 py-4 text-[var(--muted)]">{String(item.category ?? item.type ?? "—")}</td><td className="px-5 py-4 tabular-nums">{String(item.quantity ?? item.qty ?? "—")}</td><td className="px-5 py-4 text-[var(--muted)]">{String(item.status ?? item.note ?? "—")}</td></tr>; })}</tbody></table></div> : <p className="p-6 text-sm text-[var(--muted)]">No BOM snapshot is attached to this design revision yet.</p>}
+      {bom.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead className="border-b border-[var(--line)] bg-black/[0.015] text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]"><tr><th className="px-5 py-3">Item</th><th className="px-5 py-3">Category</th><th className="px-5 py-3">Quantity</th><th className="px-5 py-3">Status / note</th></tr></thead><tbody>{bom.map((item: BomLine, index: number) => <tr key={index} className="border-b border-[var(--line)]"><td className="px-5 py-4 font-medium">{String(item.description ?? item.name ?? item.item ?? `BOM line ${index + 1}`)}</td><td className="px-5 py-4 text-[var(--muted)]">{String(item.category ?? item.type ?? "—")}</td><td className="px-5 py-4 tabular-nums">{String(item.quantity ?? item.qty ?? "—")}</td><td className="px-5 py-4 text-[var(--muted)]">{String(item.status ?? item.note ?? "—")}</td></tr>)}</tbody></table></div> : <p className="p-6 text-sm text-[var(--muted)]">No BOM snapshot is attached to this design revision yet.</p>}
     </RecordWorkspaceSection>
   </RecordWorkspace>;
 }
