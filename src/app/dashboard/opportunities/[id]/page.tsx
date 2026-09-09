@@ -75,37 +75,39 @@ export default async function OpportunityPage({ params, searchParams }: { params
     notes: opportunity.notes ?? "",
   };
 
+  const missingRelationship = [!opportunity.customer_id ? "Customer" : null, !opportunity.site_id ? "Site" : null].filter(Boolean).join(" + ");
+
   return (
     <RecordWorkspace>
       <RecordHeader
-        eyebrow="Pre-contract opportunity"
+        eyebrow="Opportunity"
         title={opportunity.title}
         meta={<>{opportunity.reference} · {customer?.display_name || customer?.name || "Customer unassigned"} · {site?.name || "Site unassigned"}</>}
-        actions={<Link href="/dashboard/opportunities" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Return to register</Link>}
+        actions={<Link href="/dashboard/opportunities" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Opportunities</Link>}
       />
 
       {query.error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{query.error}</p> : null}
-      {query.created ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Opportunity created with its readiness checklist and audit record.</p> : null}
-      {query.updated ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Workflow updated successfully.</p> : null}
-      {loadFailure ? <p className="mt-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">Some related workflow data could not be loaded. Do not make decisions from incomplete information; refresh before continuing.</p> : null}
-      {!opportunity.customer_id || !opportunity.site_id ? <p className="mt-6 border border-[var(--line)] px-4 py-3 text-sm"><span className="font-semibold">Progressive intake:</span> {!opportunity.customer_id ? "Customer" : "Site"}{!opportunity.customer_id && !opportunity.site_id ? " and Site are" : " is"} still unassigned. This is permitted at lead stage but must be resolved before governed engineering and proposal issue.</p> : null}
+      {query.created ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Opportunity created.</p> : null}
+      {query.updated ? <p className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Changes saved.</p> : null}
+      {loadFailure ? <p className="mt-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">Some related data could not be loaded.</p> : null}
+      {missingRelationship ? <p className="mt-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"><span className="font-semibold">Blocked:</span> {missingRelationship} required before Engineering and Proposal.</p> : null}
 
       <section className="mt-7 grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-6">
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Stage</p><p className="mt-2 text-2xl font-medium">{titleCase(opportunity.stage)}</p></div>
-        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Required readiness</p><p className="mt-2 text-2xl font-medium">{readinessScore}%</p></div>
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Readiness</p><p className="mt-2 text-2xl font-medium">{readinessScore}%</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Site survey</p><p className="mt-2 text-lg font-medium">{titleCase(survey?.status ?? "not started")}</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Engineering</p><p className="mt-2 text-lg font-medium">{engineeringStage}</p><p className="mt-1 text-xs text-[var(--muted)]">{engineering?.system_type ? titleCase(engineering.system_type) : "No intake"}</p></div>
-        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Estimated value</p><p className="mt-2 text-2xl font-medium">{opportunity.estimated_value_gbp == null ? "Not estimated" : money.format(Number(opportunity.estimated_value_gbp))}</p></div>
+        <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Value</p><p className="mt-2 text-2xl font-medium">{opportunity.estimated_value_gbp == null ? "Not estimated" : money.format(Number(opportunity.estimated_value_gbp))}</p></div>
         <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Owner</p><p className="mt-2 text-sm font-semibold">{owner?.full_name ?? "Unassigned"}</p></div>
       </section>
 
       <WorkflowProof customerAssigned={Boolean(opportunity.customer_id)} siteAssigned={Boolean(opportunity.site_id)} requiredReadinessTotal={requiredReadiness.length} requiredReadinessComplete={acceptedRequired} proposalStatus={proposal?.status ?? null} opportunityStage={opportunity.stage} />
 
-      <RecordWorkspaceSection eyebrow="Relationship control" title="Customer and Site assignment" description="Assign governed records after intake. Site choices are filtered by Customer and conflicts are blocked server-side.">
+      <RecordWorkspaceSection eyebrow="Account" title="Customer & Site">
         <RelationshipAssignment opportunityId={id} initialCustomerId={opportunity.customer_id} initialSiteId={opportunity.site_id} customers={customersResult.data ?? []} sites={sitesResult.data ?? []} />
       </RecordWorkspaceSection>
 
-      <RecordWorkspaceSection eyebrow="Opportunity control" title="Core commercial record" description="Client-side Zod validation and React Hook Form improve operator feedback; the existing server action remains authoritative for organisation scope, relationship checks and audit logging.">
+      <RecordWorkspaceSection eyebrow="Commercial" title="Opportunity details">
         <OpportunityCoreForm opportunityId={id} customerId={opportunity.customer_id} siteId={opportunity.site_id} owners={profilesResult.data ?? []} initialValues={coreInitialValues} action={updateOpportunity} />
       </RecordWorkspaceSection>
 
@@ -113,15 +115,14 @@ export default async function OpportunityPage({ params, searchParams }: { params
       <SiteSurveyGovernance opportunityId={id} siteId={opportunity.site_id} opportunityReference={opportunity.reference} survey={survey} />
 
       <RecordWorkspaceSection
-        eyebrow="Engineering handoff"
-        title="Calculator-led engineering"
-        description="System Type → Load Profile → Calculator → Equipment Selection → Detailed Design → PVWatts → SLD + BOM → Engineering Review."
-        action={<Link href={engineeringHref} className="inline-flex min-h-11 items-center justify-center border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)]">{!engineering ? "Start engineering" : engineering.status === "ready" ? "Open Calculator" : "Continue Load Profile"}</Link>}
+        eyebrow="Engineering"
+        title="Engineering"
+        action={<Link href={engineeringHref} className="inline-flex min-h-11 items-center justify-center border border-[var(--accent)] px-5 text-xs font-semibold text-[var(--accent)]">{!engineering ? "Start engineering" : engineering.status === "ready" ? "Open calculator" : "Continue load profile"}</Link>}
       >
         <div className="grid gap-px bg-[var(--line)] sm:grid-cols-3">
-          <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Current engineering stage</p><p className="mt-2 text-lg font-semibold">{engineeringStage}</p></div>
-          <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">System Type</p><p className="mt-2 text-lg font-semibold">{engineering?.system_type ? titleCase(engineering.system_type) : "Not selected"}</p></div>
-          <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Project state</p><p className="mt-2 text-lg font-semibold text-[var(--muted)]">Not created pre-contract</p></div>
+          <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Stage</p><p className="mt-2 text-lg font-semibold">{engineeringStage}</p></div>
+          <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">System type</p><p className="mt-2 text-lg font-semibold">{engineering?.system_type ? titleCase(engineering.system_type) : "Not selected"}</p></div>
+          <div className="bg-[var(--background)] p-5"><p className="text-[10px] uppercase tracking-[0.16em] text-[var(--muted)]">Project</p><p className="mt-2 text-lg font-semibold text-[var(--muted)]">Contract required</p></div>
         </div>
       </RecordWorkspaceSection>
 
