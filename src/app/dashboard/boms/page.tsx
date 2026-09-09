@@ -44,18 +44,17 @@ export default async function BomsPage() {
       site: `${siteName}${postcode ? ` · ${String(postcode)}` : ""}`,
       lineCount: lines.length,
       itemQuantity: totalQuantity,
-      releaseState: design.status === "approved" && lines.length ? "Ready for procurement release" : design.status === "approved" ? "Approved design · BOM incomplete" : "Not released",
+      releaseState: design.status === "approved" && lines.length ? "Ready for procurement" : design.status === "approved" ? "BOM incomplete" : "Design approval required",
       updatedAt: design.updated_at,
     };
   });
 
   return <div className="mx-auto max-w-[1600px]">
     <header className="border-b border-[var(--line)] pb-7">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Engineering materials control</p>
-      <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">BOM register</h1>
-      <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--muted)]">Bill-of-material snapshots generated from governed design revisions. Procurement should consume an approved design/BOM baseline rather than independent quantities.</p>
+      <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Engineering</p>
+      <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">BOM</h1>
     </header>
-    {error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">BOM baselines could not be loaded. Refresh before commercial or procurement use.</p> : null}
+    {error ? <p className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">BOM data could not be loaded.</p> : null}
     <BomRegister rows={rows} />
   </div>;
 }
