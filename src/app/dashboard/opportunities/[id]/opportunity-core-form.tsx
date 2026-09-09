@@ -34,8 +34,8 @@ export function OpportunityCoreForm({ opportunityId, customerId, siteId, owners,
     fd.set("opportunity_id", opportunityId);
     fd.set("customer_id", customerId ?? "");
     fd.set("site_id", siteId ?? "");
-    Object.entries(values).forEach(([key, value]) => fd.set(key, value == null ? "" : String(value)));
-    startTransition(() => { void action(fd); });
+    Object.entries(values).forEach(([key, value]) => fd.set(key, value));
+    startTransition(async () => { await action(fd); });
   });
 
   const fieldError = (name: keyof OpportunityCoreInput) => {
@@ -50,9 +50,9 @@ export function OpportunityCoreForm({ opportunityId, customerId, siteId, owners,
       <div><Label htmlFor="opp-stage">Stage</Label><NativeSelect id="opp-stage" className="mt-2" {...form.register("stage")}>{opportunityStages.map((stage) => <option key={stage} value={stage}>{titleCase(stage)}</option>)}</NativeSelect></div>
       <div><Label htmlFor="opp-owner">Owner</Label><NativeSelect id="opp-owner" className="mt-2" {...form.register("owner_id")}><option value="">Unassigned</option>{owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.full_name || "Unnamed user"}</option>)}</NativeSelect></div>
       <div><Label htmlFor="opp-lead-source">Lead source</Label><Input id="opp-lead-source" className="mt-2" {...form.register("lead_source")} /></div>
-      <div><Label htmlFor="opp-pv">Estimated PV (kWp)</Label><Input id="opp-pv" className="mt-2" type="number" min="0" step="0.01" {...form.register("estimated_pv_kwp")} />{fieldError("estimated_pv_kwp")}</div>
-      <div><Label htmlFor="opp-battery">Estimated battery (kWh)</Label><Input id="opp-battery" className="mt-2" type="number" min="0" step="0.01" {...form.register("estimated_battery_kwh")} />{fieldError("estimated_battery_kwh")}</div>
-      <div><Label htmlFor="opp-value">Estimated value (£)</Label><Input id="opp-value" className="mt-2" type="number" min="0" step="0.01" {...form.register("estimated_value_gbp")} />{fieldError("estimated_value_gbp")}</div>
+      <div><Label htmlFor="opp-pv">Estimated PV (kWp)</Label><Input id="opp-pv" className="mt-2" inputMode="decimal" {...form.register("estimated_pv_kwp")} />{fieldError("estimated_pv_kwp")}</div>
+      <div><Label htmlFor="opp-battery">Estimated battery (kWh)</Label><Input id="opp-battery" className="mt-2" inputMode="decimal" {...form.register("estimated_battery_kwh")} />{fieldError("estimated_battery_kwh")}</div>
+      <div><Label htmlFor="opp-value">Estimated value (£)</Label><Input id="opp-value" className="mt-2" inputMode="decimal" {...form.register("estimated_value_gbp")} />{fieldError("estimated_value_gbp")}</div>
       <div className="md:col-span-2"><Label htmlFor="opp-notes">Notes</Label><Textarea id="opp-notes" rows={4} className="mt-2" {...form.register("notes")} />{fieldError("notes")}</div>
       <div className="flex justify-end md:col-span-2"><Button type="submit" size="lg" disabled={pending}>{pending ? "Saving…" : "Save opportunity"}</Button></div>
     </form>
