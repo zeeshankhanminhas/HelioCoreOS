@@ -68,7 +68,7 @@ export async function processUploadedDatasheet(input: {
       extractText(pdf, { mergePages: true }),
       new Promise<never>((_, reject) => setTimeout(() => reject(new Error("PDF extraction timed out.")), 15000)),
     ]);
-    const rawText = typeof result.text === "string" ? result.text : result.text.join("\n");
+    const rawText = String(result.text);
     if (rawText.trim().length < 40) throw new Error("No usable text could be extracted. This may be a scanned PDF.");
 
     const extraction = extractEquipmentSpecs(input.category, rawText);
@@ -129,18 +129,18 @@ export async function importCandidate(fd: FormData) {
   let payload: Record<string, unknown>;
   if (candidate.category === "pv_module") {
     table = "pv_modules";
-    payload = { manufacturer_id: manufacturerId, model, technology: specs.technology ?? null, pmax_w: numeric(specs.pmax_w), voc_v: numeric(specs.voc_v), vmp_v: numeric(specs.vmp_v), isc_a: numeric(specs.isc_a), imp_a: numeric(specs.imp_a), temp_coeff_pmax_pct_c: numeric(specs.temp_coeff_pmax_pct_c), temp_coeff_voc_pct_c: numeric(specs.temp_coeff_voc_pct_c), temp_coeff_isc_pct_c: numeric(specs.temp_coeff_isc_pct_c), max_system_voltage_v: numeric(specs.max_system_voltage_v), efficiency_pct: numeric(specs.efficiency_pct), width_mm: numeric(specs.width_mm), height_mm: numeric(specs.height_mm), weight_kg: numeric(specs.weight_kg), bifacial: Boolean(specs.bifacial) };
+    payload = { manufacturer_id: manufacturerId, model, technology: specs.technology ?? "mono", pmax_w: numeric(specs.pmax_w), voc_v: numeric(specs.voc_v), vmp_v: numeric(specs.vmp_v), isc_a: numeric(specs.isc_a), imp_a: numeric(specs.imp_a), temp_coeff_pmax_pct_c: numeric(specs.temp_coeff_pmax_pct_c), temp_coeff_voc_pct_c: numeric(specs.temp_coeff_voc_pct_c), temp_coeff_isc_pct_c: numeric(specs.temp_coeff_isc_pct_c), max_system_voltage_v: numeric(specs.max_system_voltage_v), efficiency_pct: numeric(specs.efficiency_pct), width_mm: numeric(specs.width_mm), height_mm: numeric(specs.height_mm), weight_kg: numeric(specs.weight_kg), bifacial: Boolean(specs.bifacial) };
   } else if (candidate.category === "inverter") {
     table = "inverters";
     payload = { manufacturer_id: manufacturerId, model, inverter_type: specs.inverter_type ?? "string", phase: specs.phase ?? "three_phase", rated_ac_power_kw: numeric(specs.rated_ac_power_kw), max_pv_input_power_kw: numeric(specs.max_pv_input_power_kw), max_dc_voltage_v: numeric(specs.max_dc_voltage_v), mppt_min_v: numeric(specs.mppt_min_v), mppt_max_v: numeric(specs.mppt_max_v), mppt_count: numeric(specs.mppt_count), max_input_current_per_mppt_a: numeric(specs.max_input_current_per_mppt_a), max_short_circuit_current_per_mppt_a: numeric(specs.max_short_circuit_current_per_mppt_a), max_charge_power_kw: numeric(specs.max_charge_power_kw), max_discharge_power_kw: numeric(specs.max_discharge_power_kw), battery_voltage_min_v: numeric(specs.battery_voltage_min_v), battery_voltage_max_v: numeric(specs.battery_voltage_max_v), max_efficiency_pct: numeric(specs.max_efficiency_pct) };
   } else {
     table = "batteries";
-    payload = { manufacturer_id: manufacturerId, model, chemistry: specs.chemistry ?? null, nominal_capacity_kwh: numeric(specs.nominal_capacity_kwh), usable_capacity_kwh: numeric(specs.usable_capacity_kwh), nominal_voltage_v: numeric(specs.nominal_voltage_v), operating_voltage_min_v: numeric(specs.operating_voltage_min_v), operating_voltage_max_v: numeric(specs.operating_voltage_max_v), max_charge_power_kw: numeric(specs.max_charge_power_kw), max_discharge_power_kw: numeric(specs.max_discharge_power_kw), max_dod_pct: numeric(specs.max_dod_pct), round_trip_efficiency_pct: numeric(specs.round_trip_efficiency_pct), cycle_life: numeric(specs.cycle_life) };
+    payload = { manufacturer_id: manufacturerId, model, chemistry: specs.chemistry ?? "lfp", nominal_capacity_kwh: numeric(specs.nominal_capacity_kwh), usable_capacity_kwh: numeric(specs.usable_capacity_kwh), nominal_voltage_v: numeric(specs.nominal_voltage_v), operating_voltage_min_v: numeric(specs.operating_voltage_min_v), operating_voltage_max_v: numeric(specs.operating_voltage_max_v), max_charge_power_kw: numeric(specs.max_charge_power_kw), max_discharge_power_kw: numeric(specs.max_discharge_power_kw), max_dod_pct: numeric(specs.max_dod_pct), round_trip_efficiency_pct: numeric(specs.round_trip_efficiency_pct), cycle_life: numeric(specs.cycle_life) };
   }
   const storagePath = String((candidate.evidence as Record<string, unknown> | null)?.storage_path ?? "");
   const datasheetUrl = storagePath ? `storage:equipment-datasheets/${storagePath}` : null;
   const { data: created, error } = await supabase.from(table).insert({ ...payload, organisation_id: organisationId, datasheet_url: datasheetUrl, status: "draft", created_by: user.id }).select("id").single();
-  if (error || !created) throw new Error(error?.message ?? "Draft equipment record could not be created.");
+  if (error || !created) throw new Error(error?.message ?? "Draft equipment record could not be created. Complete missing required specifications first.");
   await supabase.from("equipment_import_candidates").update({ manufacturer_id: manufacturerId, model, status: "imported", imported_equipment_id: created.id, reviewed_by: user.id, reviewed_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq("id", candidateId);
   revalidatePath("/dashboard/engineering/equipment/import");
   revalidatePath("/dashboard/engineering/equipment");
