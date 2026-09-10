@@ -56,6 +56,19 @@ alter table public.equipment_import_batches enable row level security;
 alter table public.equipment_import_files enable row level security;
 alter table public.equipment_import_candidates enable row level security;
 
+drop policy if exists equipment_import_batches_select on public.equipment_import_batches;
+drop policy if exists equipment_import_batches_insert on public.equipment_import_batches;
+drop policy if exists equipment_import_batches_update on public.equipment_import_batches;
+drop policy if exists equipment_import_batches_delete on public.equipment_import_batches;
+drop policy if exists equipment_import_files_select on public.equipment_import_files;
+drop policy if exists equipment_import_files_insert on public.equipment_import_files;
+drop policy if exists equipment_import_files_update on public.equipment_import_files;
+drop policy if exists equipment_import_files_delete on public.equipment_import_files;
+drop policy if exists equipment_import_candidates_select on public.equipment_import_candidates;
+drop policy if exists equipment_import_candidates_insert on public.equipment_import_candidates;
+drop policy if exists equipment_import_candidates_update on public.equipment_import_candidates;
+drop policy if exists equipment_import_candidates_delete on public.equipment_import_candidates;
+
 create policy equipment_import_batches_select on public.equipment_import_batches for select to authenticated using (organisation_id = current_organisation_id());
 create policy equipment_import_batches_insert on public.equipment_import_batches for insert to authenticated with check (organisation_id = current_organisation_id());
 create policy equipment_import_batches_update on public.equipment_import_batches for update to authenticated using (organisation_id = current_organisation_id()) with check (organisation_id = current_organisation_id());
@@ -72,6 +85,10 @@ create policy equipment_import_candidates_delete on public.equipment_import_cand
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('equipment-datasheets','equipment-datasheets',false,20971520,array['application/pdf'])
 on conflict (id) do update set public=false, file_size_limit=20971520, allowed_mime_types=array['application/pdf'];
+
+drop policy if exists equipment_datasheets_select on storage.objects;
+drop policy if exists equipment_datasheets_insert on storage.objects;
+drop policy if exists equipment_datasheets_delete on storage.objects;
 
 create policy equipment_datasheets_select on storage.objects for select to authenticated using (bucket_id = 'equipment-datasheets' and (storage.foldername(name))[1] = current_organisation_id()::text);
 create policy equipment_datasheets_insert on storage.objects for insert to authenticated with check (bucket_id = 'equipment-datasheets' and (storage.foldername(name))[1] = current_organisation_id()::text);
