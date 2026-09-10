@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feature/engineering-core-v1
+      - feature/design-engine-v1
   pull_request:
     branches:
       - main
@@ -35,3 +36,16 @@ jobs:
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_example
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install HelioCalc dependencies
+        working-directory: services/heliocalc
+        run: pip install -r requirements.txt
+
+      - name: Test HelioCalc
+        working-directory: services/heliocalc
+        run: python -m unittest discover -s tests
