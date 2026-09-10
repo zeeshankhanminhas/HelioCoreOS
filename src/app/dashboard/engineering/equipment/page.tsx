@@ -14,12 +14,13 @@ export default async function EquipmentLibraryPage({ searchParams }: Props) {
   const activeTab: TabId = tabIds.includes(messages.tab as TabId) ? messages.tab as TabId : "manufacturers";
   const supabase = await createClient();
 
-  const [{ data: manufacturers }, { data: modules }, { data: inverters }, { data: batteries }, { data: compatibility }] = await Promise.all([
+  const [{ data: manufacturers }, { data: modules }, { data: inverters }, { data: batteries }, { data: compatibility }, { count: importReviewCount }] = await Promise.all([
     supabase.from("equipment_manufacturers").select("*").order("name"),
     supabase.from("pv_modules").select("*").order("created_at", { ascending: false }),
     supabase.from("inverters").select("*").order("created_at", { ascending: false }),
     supabase.from("batteries").select("*").order("created_at", { ascending: false }),
     supabase.from("inverter_battery_compatibility").select("*").order("updated_at", { ascending: false }),
+    supabase.from("equipment_import_candidates").select("id", { count: "exact", head: true }).eq("status", "review"),
   ]);
 
   const approvedCount = [...(modules ?? []), ...(inverters ?? []), ...(batteries ?? [])].filter((item) => item.status === "approved").length;
@@ -30,11 +31,13 @@ export default async function EquipmentLibraryPage({ searchParams }: Props) {
       <section className="app-panel">
         <div className="app-toolbar flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="app-kicker">Technical master data</p>
+            <p className="app-kicker">Equipment</p>
             <h1 className="app-title mt-1">Equipment library</h1>
-            <p className="mt-1 text-[11px] text-[var(--muted)]">Governed manufacturer data used by HelioCalc, detailed design, SLD and BOM.</p>
           </div>
-          <Link href="/dashboard/engineering" className="inline-flex min-h-9 w-fit items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold hover:border-[var(--foreground)]">Back to engineering</Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/dashboard/engineering/equipment/import" className="inline-flex min-h-9 items-center border border-[var(--accent)] px-3 text-[11px] font-semibold text-[var(--accent)]">Import datasheets{importReviewCount ? ` · ${importReviewCount} review` : ""}</Link>
+            <Link href="/dashboard/engineering" className="inline-flex min-h-9 items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold hover:border-[var(--foreground)]">Engineering</Link>
+          </div>
         </div>
         <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">
           {[
@@ -53,8 +56,8 @@ export default async function EquipmentLibraryPage({ searchParams }: Props) {
       </section>
 
       {messages.error ? <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{messages.error}</div> : null}
-      {messages.created ? <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Technical library record saved.</div> : null}
-      {messages.updated ? <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Equipment profile updated and recorded in the audit trail.</div> : null}
+      {messages.created ? <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Equipment record saved.</div> : null}
+      {messages.updated ? <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Equipment profile updated.</div> : null}
 
       <EquipmentWorkspace
         initialTab={activeTab}
