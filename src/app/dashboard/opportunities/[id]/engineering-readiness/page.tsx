@@ -62,7 +62,17 @@ export default function EngineeringReadinessPage({ params }: PageProps) {
   }
 
   useEffect(() => {
-    void refresh();
+    let cancelled = false;
+    loadOpportunityEngineeringReadiness(id)
+      .then((nextState) => {
+        if (!cancelled) setState(nextState);
+      })
+      .catch((loadError: unknown) => {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Readiness could not be loaded.");
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   const statusTone = useMemo(() => {
