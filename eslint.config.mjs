@@ -15,7 +15,7 @@ export default defineConfig([
     files: [
       "src/lib/neon/load-profiles.ts",
       "src/app/dashboard/engineering/page.tsx",
-      "src/app/dashboard/engineering/load-profiles/[id]/page.tsx",
+      "src/app/dashboard/engineering/load-profiles/**/page.tsx",
     ],
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
