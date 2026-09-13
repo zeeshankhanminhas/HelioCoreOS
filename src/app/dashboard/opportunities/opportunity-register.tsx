@@ -67,7 +67,7 @@ export function OpportunityRegister({ rows }: { rows: OpportunityRegisterRow[] }
     { accessorKey: "stage", header: "Stage", cell: ({ getValue }) => <span className={`inline-flex border px-2.5 py-1 text-xs font-semibold ${statusClass(String(getValue()))}`}>{titleCase(String(getValue()))}</span> },
     { accessorKey: "owner", header: "Owner", cell: ({ getValue }) => <span className="text-xs text-[var(--muted)]">{String(getValue())}</span> },
     { accessorKey: "valueNumber", header: ({ column }) => <Button type="button" variant="ghost" size="sm" onClick={column.getToggleSortingHandler()}>Estimated value <ArrowUpDown className="h-3.5 w-3.5" /></Button>, cell: ({ row }) => <span className="font-semibold tabular-nums">{row.original.valueLabel}</span> },
-    { id: "open", header: "", cell: ({ row }) => <Button asChild variant="ghost" size="icon"><Link href={`/dashboard/opportunities/${row.original.id}`} aria-label={`Open ${row.original.title}`}><ExternalLink className="h-4 w-4" /></Link></Button> },
+    { id: "open", header: "", cell: ({ row }) => <div className="flex justify-end gap-1"><Button asChild variant="ghost" size="sm"><Link href={`/dashboard/opportunities/${row.original.id}/engineering-readiness`}>Readiness</Link></Button><Button asChild variant="ghost" size="icon"><Link href={`/dashboard/opportunities/${row.original.id}`} aria-label={`Open ${row.original.title}`}><ExternalLink className="h-4 w-4" /></Link></Button></div> },
   ], []);
 
   const applyFilters = form.handleSubmit(async (values) => {
