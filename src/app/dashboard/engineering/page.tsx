@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { assessOpportunityEngineeringReadiness } from "@/lib/application/opportunity-readiness";
 import { systemTypeLabels } from "@/lib/engineering/design-rules";
 import type { SystemType } from "@/lib/engineering/types";
 import { DesignIntake } from "./_components/design-intake";
@@ -18,11 +19,12 @@ export default async function EngineeringPage({ searchParams }: Props) {
   const messages = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: opportunities }, { data: sites }, { data: recentIntakes }, { data: calculations }] = await Promise.all([
-    supabase.from("opportunities").select("id,reference,title,site_id,created_at").order("created_at", { ascending: false }).limit(50),
+  const [{ data: opportunities }, { data: sites }, { data: recentIntakes }, { data: calculations }, { data: readiness }] = await Promise.all([
+    supabase.from("opportunities").select("id,reference,title,customer_id,site_id,created_at").order("created_at", { ascending: false }).limit(50),
     supabase.from("sites").select("id,name,postcode"),
     supabase.from("engineering_intakes").select("id,opportunity_id,load_profile_id,system_type,design_objective,status,created_at").order("created_at", { ascending: false }).limit(8),
     supabase.from("engineering_calculations").select("engineering_intake_id,revision,created_at").order("revision", { ascending: false }),
+    supabase.from("opportunity_readiness_items").select("opportunity_id,item_type,status,is_required"),
   ]);
 
   const siteMap = new Map((sites ?? []).map((site) => [site.id, site]));
@@ -32,8 +34,22 @@ export default async function EngineeringPage({ searchParams }: Props) {
     if (!latestCalculation.has(calculation.engineering_intake_id)) latestCalculation.set(calculation.engineering_intake_id, calculation);
   }
 
+  const readinessByOpportunity = new Map<string, NonNullable<typeof readiness>>();
+  for (const item of readiness ?? []) {
+    const group = readinessByOpportunity.get(item.opportunity_id) ?? [];
+    group.push(item);
+    readinessByOpportunity.set(item.opportunity_id, group);
+  }
+
   const opportunityOptions = (opportunities ?? [])
-    .filter((opportunity) => Boolean(opportunity.site_id))
+    .filter((opportunity) => {
+      const assessment = assessOpportunityEngineeringReadiness({
+        customerId: opportunity.customer_id,
+        siteId: opportunity.site_id,
+        items: (readinessByOpportunity.get(opportunity.id) ?? []) as Parameters<typeof assessOpportunityEngineeringReadiness>[0]["items"],
+      });
+      return assessment.readyForEngineering;
+    })
     .map((opportunity) => {
       const site = opportunity.site_id ? siteMap.get(opportunity.site_id) : null;
       return {
@@ -61,7 +77,8 @@ export default async function EngineeringPage({ searchParams }: Props) {
             <Link href="/dashboard/boms" className="inline-flex min-h-9 items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold hover:border-[var(--foreground)]">BOM</Link>
           </div>
         </div>
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-3">
+        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-4">
+          <div className="bg-white px-4 py-3"><p className="app-kicker">Eligible Opportunities</p><p className="mt-1 text-lg font-semibold tabular-nums">{opportunityOptions.length}</p></div>
           <div className="bg-white px-4 py-3"><p className="app-kicker">Active</p><p className="mt-1 text-lg font-semibold tabular-nums">{recentIntakes?.length ?? 0}</p></div>
           <div className="bg-white px-4 py-3"><p className="app-kicker">Load ready</p><p className="mt-1 text-lg font-semibold tabular-nums">{readyCount}</p></div>
           <div className="bg-white px-4 py-3"><p className="app-kicker">Calculators</p><p className="mt-1 text-lg font-semibold tabular-nums">{calculatorCount}</p></div>
@@ -70,7 +87,7 @@ export default async function EngineeringPage({ searchParams }: Props) {
 
       <section className="app-panel overflow-x-auto">
         <div className="flex min-w-max divide-x divide-[var(--line)] text-[10px] font-semibold uppercase tracking-[0.1em]">
-          {["Opportunity + Site", "Load Profile", "Calculator", "Equipment", "Design", "Performance", "SLD + BOM", "Review", "Contract", "Project"].map((item, index) => (
+          {["Opportunity + Site", "Readiness", "Load Profile", "Calculator", "Equipment", "Design", "Performance", "SLD + BOM", "Review", "Contract", "Project"].map((item, index) => (
             <div key={item} className={`px-3 py-2.5 ${item === "Project" ? "text-[var(--muted)]" : ""}`}><span className="mr-2 text-[var(--muted)]">{String(index + 1).padStart(2, "0")}</span>{item}</div>
           ))}
         </div>
@@ -79,7 +96,16 @@ export default async function EngineeringPage({ searchParams }: Props) {
       {messages.error ? <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{messages.error}</div> : null}
       {messages.created ? <div className="border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Engineering intake created.</div> : null}
 
-      <DesignIntake opportunities={opportunityOptions} initialOpportunityId={messages.opportunity} />
+      {opportunityOptions.length ? (
+        <DesignIntake opportunities={opportunityOptions} initialOpportunityId={messages.opportunity} />
+      ) : (
+        <section className="app-panel p-5">
+          <p className="app-kicker">Readiness gate</p>
+          <h2 className="mt-2 text-lg font-semibold">No Opportunity is currently ready for engineering.</h2>
+          <p className="mt-2 text-sm text-[var(--muted)]">Assign Customer and Site, then complete the required readiness evidence from the Opportunity register.</p>
+          <Link href="/dashboard/opportunities" className="mt-4 inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Open Opportunities</Link>
+        </section>
+      )}
 
       <section className="app-panel">
         <div className="app-toolbar flex items-center justify-between gap-4 px-4">
