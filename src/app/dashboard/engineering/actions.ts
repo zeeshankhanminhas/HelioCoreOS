@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { assessOpportunityEngineeringReadiness } from "@/lib/application/opportunity-readiness";
 import type { DesignObjective, LoadProfileSource, SystemType } from "@/lib/engineering/types";
 
 const systemTypes: SystemType[] = ["on_grid", "off_grid", "hybrid"];
@@ -33,9 +34,7 @@ function fail(message: string): never {
 
 async function context() {
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
   const { data: profile, error } = await supabase
@@ -68,14 +67,33 @@ export async function createEngineeringIntake(fd: FormData) {
   if (exportLimitKw != null && exportLimitKw < 0) fail("Export limit cannot be negative.");
   if (reserveSocPct != null && (reserveSocPct < 0 || reserveSocPct > 100)) fail("Reserve SOC must be between 0% and 100%.");
 
-  const { data: opportunity } = await supabase
-    .from("opportunities")
-    .select("id,reference,site_id")
-    .eq("id", opportunityId)
-    .eq("organisation_id", organisationId)
-    .maybeSingle();
+  const [{ data: opportunity }, { data: readiness, error: readinessError }] = await Promise.all([
+    supabase
+      .from("opportunities")
+      .select("id,reference,customer_id,site_id")
+      .eq("id", opportunityId)
+      .eq("organisation_id", organisationId)
+      .maybeSingle(),
+    supabase
+      .from("opportunity_readiness_items")
+      .select("item_type,status,is_required")
+      .eq("opportunity_id", opportunityId)
+      .eq("organisation_id", organisationId),
+  ]);
 
-  if (!opportunity?.site_id) fail("This opportunity needs a site before engineering can begin.");
+  if (!opportunity) fail("Opportunity not found or access denied.");
+  if (readinessError) fail("Opportunity readiness could not be verified.");
+
+  const assessment = assessOpportunityEngineeringReadiness({
+    customerId: opportunity.customer_id,
+    siteId: opportunity.site_id,
+    items: (readiness ?? []) as Parameters<typeof assessOpportunityEngineeringReadiness>[0]["items"],
+  });
+
+  if (!assessment.readyForEngineering) {
+    redirect(`/dashboard/opportunities/${opportunityId}/engineering-readiness?blocked=1`);
+  }
+  if (!opportunity.site_id) fail("This opportunity needs a site before engineering can begin.");
 
   const { data: loadProfile, error: loadProfileError } = await supabase
     .from("load_profiles")
