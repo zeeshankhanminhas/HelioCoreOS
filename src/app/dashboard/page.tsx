@@ -1,412 +1,150 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 
-const pipelineStages = [
-  { key: "qualification", label: "Qualification", short: "Qualify" },
-  { key: "survey", label: "Survey", short: "Survey" },
-  { key: "design", label: "Design", short: "Design" },
-  { key: "commercial", label: "Commercial", short: "Commercial" },
-  { key: "procurement", label: "Procurement", short: "Procure" },
-  { key: "installation", label: "Installation", short: "Install" },
-  { key: "commissioning", label: "Commissioning", short: "Commission" },
-  { key: "handover", label: "Handover", short: "Handover" },
-] as const;
-
-const activeProjectStatuses = pipelineStages.map((stage) => stage.key);
-
-const currency = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "GBP",
-  maximumFractionDigits: 0,
-});
-
-const compactNumber = new Intl.NumberFormat("en-GB", {
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
-
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
-
-const dayFormatter = new Intl.DateTimeFormat("en-GB", {
-  weekday: "long",
-  day: "numeric",
-  month: "long",
-});
-
-type Project = {
-  id: string;
-  name: string;
-  reference: string;
-  status: string;
-  risk_status: "green" | "amber" | "red";
-  pv_capacity_kwp: number | null;
-  contract_value_gbp: number | null;
-  target_completion_date: string | null;
-};
-
-type Activity = {
-  id: number;
-  event_type: string;
-  description: string;
-  created_at: string;
-};
-
-type SignalTone = "critical" | "watch" | "clear";
-
-type Signal = {
-  title: string;
-  detail: string;
-  value: string;
-  href: string;
-  tone: SignalTone;
-};
+const deliveryStages = ["procurement", "installation", "commissioning", "handover"] as const;
+const date = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
 
 function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-function riskClasses(risk: Project["risk_status"]) {
-  if (risk === "red") return "bg-red-600";
-  if (risk === "amber") return "bg-amber-500";
-  return "bg-emerald-600";
-}
-
-function signalClasses(tone: SignalTone) {
-  if (tone === "critical") return "border-red-300 bg-red-50/40 text-red-800";
-  if (tone === "watch") return "border-amber-300 bg-amber-50/40 text-amber-800";
-  return "border-emerald-300 bg-emerald-50/30 text-emerald-800";
-}
-
-function signalDot(tone: SignalTone) {
-  if (tone === "critical") return "bg-red-600";
-  if (tone === "watch") return "bg-amber-500";
-  return "bg-emerald-600";
-}
-
 export default async function DashboardPage() {
   const supabase = await createClient();
-  const now = new Date();
-  const today = now.toISOString().slice(0, 10);
-  const nextThirtyDays = new Date(now);
-  nextThirtyDays.setDate(nextThirtyDays.getDate() + 30);
-  const nextThirtyDaysIso = nextThirtyDays.toISOString().slice(0, 10);
+  const today = new Date().toISOString().slice(0, 10);
 
-  const [projectsResult, customersResult, tasksResult, overdueResult, documentsResult, activityResult] = await Promise.all([
-    supabase
-      .from("projects")
-      .select("id, name, reference, status, risk_status, pv_capacity_kwp, contract_value_gbp, target_completion_date")
-      .order("updated_at", { ascending: false }),
-    supabase.from("customers").select("id", { count: "exact", head: true }),
+  const [opportunitiesResult, engineeringResult, calculationsResult, projectsResult, openTasksResult, overdueTasksResult, activityResult] = await Promise.all([
+    supabase.from("opportunities").select("id,reference,title,stage,estimated_value_gbp,created_at").order("updated_at", { ascending: false }).limit(50),
+    supabase.from("engineering_intakes").select("id,opportunity_id,status,system_type,load_profile_id,created_at").order("created_at", { ascending: false }).limit(50),
+    supabase.from("engineering_calculations").select("id,engineering_intake_id,revision,created_at").order("created_at", { ascending: false }).limit(100),
+    supabase.from("projects").select("id,name,reference,status,risk_status,contract_value_gbp,target_completion_date,updated_at").order("updated_at", { ascending: false }).limit(50),
     supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "complete"),
-    supabase
-      .from("tasks")
-      .select("id", { count: "exact", head: true })
-      .neq("status", "complete")
-      .lt("due_date", today),
-    supabase.from("documents").select("id", { count: "exact", head: true }),
-    supabase
-      .from("activity_logs")
-      .select("id, event_type, description, created_at")
-      .order("created_at", { ascending: false })
-      .limit(6),
+    supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "complete").lt("due_date", today),
+    supabase.from("activity_logs").select("id,event_type,description,created_at").order("created_at", { ascending: false }).limit(8),
   ]);
 
-  const projects = (projectsResult.data ?? []) as Project[];
-  const activities = (activityResult.data ?? []) as Activity[];
-  const activeProjects = projects.filter((project) => activeProjectStatuses.includes(project.status as (typeof activeProjectStatuses)[number]));
-  const totalCapacity = activeProjects.reduce((sum, project) => sum + Number(project.pv_capacity_kwp ?? 0), 0);
-  const contractValue = activeProjects.reduce((sum, project) => sum + Number(project.contract_value_gbp ?? 0), 0);
-  const redRiskCount = activeProjects.filter((project) => project.risk_status === "red").length;
-  const amberRiskCount = activeProjects.filter((project) => project.risk_status === "amber").length;
-  const overdueCount = overdueResult.count ?? 0;
-  const openTaskCount = tasksResult.count ?? 0;
-  const upcomingCompletions = activeProjects.filter(
-    (project) => project.target_completion_date && project.target_completion_date >= today && project.target_completion_date <= nextThirtyDaysIso,
-  );
-  const pastTargetProjects = activeProjects.filter(
-    (project) => project.target_completion_date && project.target_completion_date < today,
-  );
+  const opportunities = opportunitiesResult.data ?? [];
+  const engineering = engineeringResult.data ?? [];
+  const calculations = calculationsResult.data ?? [];
+  const projects = projectsResult.data ?? [];
+  const activities = activityResult.data ?? [];
 
-  const pipeline = pipelineStages.map((stage) => ({
-    ...stage,
-    count: activeProjects.filter((project) => project.status === stage.key).length,
+  const openOpportunities = opportunities.filter((item) => item.stage !== "won" && item.stage !== "lost");
+  const proposalStage = openOpportunities.filter((item) => item.stage === "proposal");
+  const activeEngineering = engineering.filter((item) => item.status !== "superseded");
+  const readyForCalculator = activeEngineering.filter((item) => item.status === "ready");
+  const intakeIdsWithCalculation = new Set(calculations.map((item) => item.engineering_intake_id));
+  const calculatorStarted = activeEngineering.filter((item) => intakeIdsWithCalculation.has(item.id));
+  const deliveryProjects = projects.filter((item) => deliveryStages.includes(item.status as (typeof deliveryStages)[number]));
+  const legacyProjects = projects.filter((item) => !deliveryStages.includes(item.status as (typeof deliveryStages)[number]) && item.status !== "complete" && item.status !== "on_hold");
+  const redRiskProjects = deliveryProjects.filter((item) => item.risk_status === "red");
+  const overdueTasks = overdueTasksResult.count ?? 0;
+  const openTasks = openTasksResult.count ?? 0;
+  const deliveryValue = deliveryProjects.reduce((sum, item) => sum + Number(item.contract_value_gbp ?? 0), 0);
+
+  const stageCounts = deliveryStages.map((stage) => ({
+    stage,
+    count: deliveryProjects.filter((project) => project.status === stage).length,
   }));
-  const pipelineMax = Math.max(...pipeline.map((stage) => stage.count), 1);
-  const busiestStage = pipeline.reduce((current, stage) => (stage.count > current.count ? stage : current), pipeline[0]);
+
+  const operatingSequence = [
+    { label: "Opportunity + Site", area: "Pre-contract", href: "/dashboard/opportunities" },
+    { label: "System Type + Load Profile", area: "Engineering", href: "/dashboard/engineering" },
+    { label: "Calculator", area: "Engineering", href: "/dashboard/engineering" },
+    { label: "Equipment + Detailed Design", area: "Engineering", href: "/dashboard/engineering" },
+    { label: "PVWatts + SLD + BOM + Review", area: "Engineering", href: "/dashboard/engineering" },
+    { label: "Proposal / Contract", area: "Pre-contract", href: "/dashboard/opportunities" },
+    { label: "Project / Delivery", area: "Post-contract", href: "/dashboard/projects" },
+  ];
 
   const metrics = [
-    {
-      label: "Active projects",
-      value: String(activeProjects.length),
-      note: redRiskCount ? `${redRiskCount} require executive attention` : "No red-risk projects",
-      accent: redRiskCount > 0,
-    },
-    {
-      label: "Installed pipeline",
-      value: `${compactNumber.format(totalCapacity)} kWp`,
-      note: "Combined active project capacity",
-      accent: false,
-    },
-    {
-      label: "Contract value",
-      value: currency.format(contractValue),
-      note: "Current active EPC portfolio",
-      accent: false,
-    },
-    {
-      label: "Open actions",
-      value: String(openTaskCount),
-      note: overdueCount ? `${overdueCount} overdue` : "No overdue actions",
-      accent: overdueCount > 0,
-    },
-  ];
-
-  const signals: Signal[] = [
-    {
-      title: "Delivery risk",
-      detail: redRiskCount ? "Projects need immediate risk ownership and recovery action." : "No projects are currently marked red risk.",
-      value: String(redRiskCount),
-      href: "/dashboard/projects",
-      tone: redRiskCount ? "critical" : "clear",
-    },
-    {
-      title: "Overdue actions",
-      detail: overdueCount ? "Accountable actions have passed their due date." : "The action register has no overdue work.",
-      value: String(overdueCount),
-      href: "/dashboard/tasks",
-      tone: overdueCount ? "critical" : "clear",
-    },
-    {
-      title: "Schedule pressure",
-      detail: pastTargetProjects.length ? "Active projects have moved beyond their target completion date." : "No active project is beyond its target date.",
-      value: String(pastTargetProjects.length),
-      href: "/dashboard/projects",
-      tone: pastTargetProjects.length ? "watch" : "clear",
-    },
-    {
-      title: "Amber watch",
-      detail: amberRiskCount ? "Projects should be reviewed before risk escalates." : "No projects are currently under amber watch.",
-      value: String(amberRiskCount),
-      href: "/dashboard/projects",
-      tone: amberRiskCount ? "watch" : "clear",
-    },
-  ];
-
-  const attentionCount = signals.filter((signal) => signal.tone !== "clear").length;
-  const brief = [
-    redRiskCount
-      ? `${redRiskCount} red-risk project${redRiskCount === 1 ? " requires" : "s require"} executive intervention.`
-      : "No red-risk projects require intervention.",
-    overdueCount
-      ? `${overdueCount} action${overdueCount === 1 ? " is" : "s are"} overdue across the portfolio.`
-      : "The action register has no overdue work.",
-    upcomingCompletions.length
-      ? `${upcomingCompletions.length} project${upcomingCompletions.length === 1 ? " is" : "s are"} targeted for completion within 30 days.`
-      : "No project completion is currently scheduled within 30 days.",
-    activeProjects.length
-      ? `${busiestStage.label} is the busiest stage with ${busiestStage.count} active project${busiestStage.count === 1 ? "" : "s"}.`
-      : "The governed EPC pipeline is ready for its first live project.",
+    { label: "Open opportunities", value: String(openOpportunities.length), note: `${proposalStage.length} at proposal stage`, href: "/dashboard/opportunities" },
+    { label: "Engineering intakes", value: String(activeEngineering.length), note: `${readyForCalculator.length} load profiles ready`, href: "/dashboard/engineering" },
+    { label: "Calculator started", value: String(calculatorStarted.length), note: `${calculations.length} saved sizing revisions`, href: "/dashboard/engineering" },
+    { label: "Delivery projects", value: String(deliveryProjects.length), note: currency.format(deliveryValue), href: "/dashboard/projects" },
   ];
 
   return (
     <div className="mx-auto max-w-[1500px]">
-      <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 md:flex-row md:items-end md:justify-between">
+      <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Executive command centre</p>
-          <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">Operational overview</h1>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">
-            Decisions first: commercial commitments, engineering flow, delivery exposure and completion evidence in one governed view.
-          </p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Operating command centre</p>
+          <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">Lifecycle overview</h1>
+          <p className="mt-4 max-w-3xl text-sm leading-6 text-[var(--muted)]">Pre-contract commercial work feeds Engineering. Engineering produces the governed technical basis. Only a signed contract creates a Project and moves the job into Delivery.</p>
         </div>
-        <div className="flex shrink-0 flex-col gap-2 sm:flex-row md:justify-end">
-          <Link href="/dashboard/tasks" className="inline-flex min-h-10 items-center justify-center border border-[var(--line)] px-4 py-2.5 text-xs font-semibold hover:border-[var(--foreground)]">
-            Review actions
-          </Link>
-          <Link href="/dashboard/projects" className="inline-flex min-h-10 items-center justify-center border border-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white">
-            Open portfolio
-          </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link href="/dashboard/opportunities" className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 py-2.5 text-xs font-semibold text-[var(--accent)]">Open Opportunities</Link>
+          <Link href="/dashboard/engineering" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Open Engineering</Link>
         </div>
       </header>
 
-      <section className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,0.65fr)]">
-        <article className="border border-[var(--line)] p-5 md:p-7">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Today&apos;s executive brief</p>
-              <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">{dayFormatter.format(now)}</h2>
-            </div>
-            <span className={`w-fit border px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] ${attentionCount ? "border-[var(--accent)] text-[var(--accent)]" : "border-emerald-300 text-emerald-700"}`}>
-              {attentionCount ? `${attentionCount} areas need attention` : "Portfolio controlled"}
-            </span>
-          </div>
-          <div className="mt-7 divide-y divide-[var(--line)] border-y border-[var(--line)]">
-            {brief.map((item, index) => (
-              <div key={item} className="grid grid-cols-[28px_minmax(0,1fr)] gap-3 py-4">
-                <span className="text-[10px] font-semibold tabular-nums text-[var(--accent)]">0{index + 1}</span>
-                <p className="text-sm leading-6">{item}</p>
-              </div>
+      <section className="mt-7 border border-[var(--line)]">
+        <div className="border-b border-[var(--line)] p-5 md:px-6">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">HelioCoreOS operating sequence</p>
+          <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">One direction through the OS</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <ol className="flex min-w-max divide-x divide-[var(--line)]">
+            {operatingSequence.map((item, index) => (
+              <li key={item.label} className="min-w-[190px] p-5">
+                <div className="flex items-center justify-between gap-4"><span className="text-xs tabular-nums text-[var(--muted)]">{String(index + 1).padStart(2, "0")}</span><span className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[var(--muted)]">{item.area}</span></div>
+                <Link href={item.href} className="mt-4 block text-sm font-semibold leading-5 hover:text-[var(--accent)]">{item.label}</Link>
+              </li>
             ))}
-          </div>
-        </article>
-
-        <article className="border border-[var(--line)] p-5 md:p-7">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Decision posture</p>
-          <div className="mt-5 flex items-end gap-3">
-            <strong className="text-6xl font-medium tracking-[-0.06em]">{attentionCount}</strong>
-            <span className="pb-2 text-xs leading-5 text-[var(--muted)]">active<br />attention signals</span>
-          </div>
-          <div className="mt-7 h-1.5 bg-black/[0.06]">
-            <div className={`h-full ${attentionCount ? "bg-[var(--accent)]" : "bg-emerald-600"}`} style={{ width: attentionCount ? `${Math.min(25 * attentionCount, 100)}%` : "100%" }} />
-          </div>
-          <p className="mt-5 text-sm leading-6 text-[var(--muted)]">
-            {attentionCount
-              ? "Prioritise risk ownership and overdue action recovery before routine portfolio work."
-              : "No exception currently overrides the normal operating rhythm."}
-          </p>
-        </article>
+          </ol>
+        </div>
       </section>
 
-      <section className="mt-7 grid gap-px border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4" aria-label="Executive metrics">
+      <section className="mt-7 grid gap-px border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map((metric) => (
-          <article key={metric.label} className="bg-[var(--background)] p-5 md:p-6">
-            <div className="flex items-center justify-between gap-3">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{metric.label}</p>
-              <span className={`h-1.5 w-1.5 rounded-full ${metric.accent ? "bg-[var(--accent)]" : "bg-emerald-600"}`} />
-            </div>
-            <p className="mt-7 text-3xl font-medium tracking-[-0.045em] md:text-4xl">{metric.value}</p>
-            <p className={`mt-3 text-xs leading-5 ${metric.accent ? "text-[var(--accent)]" : "text-[var(--muted)]"}`}>{metric.note}</p>
-          </article>
+          <Link key={metric.label} href={metric.href} className="bg-[var(--background)] p-5 transition hover:bg-white/45 md:p-6">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--muted)]">{metric.label}</p>
+            <p className="mt-6 text-4xl font-medium tracking-[-0.05em]">{metric.value}</p>
+            <p className="mt-3 text-xs leading-5 text-[var(--muted)]">{metric.note}</p>
+          </Link>
         ))}
       </section>
 
-      <section className="mt-7">
-        <div className="mb-4 flex items-end justify-between gap-4">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Attention required</p>
-            <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Exception register</h2>
-          </div>
-          <Link href="/dashboard/tasks" className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)]">Open action register</Link>
-        </div>
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          {signals.map((signal) => (
-            <Link key={signal.title} href={signal.href} className={`block border p-5 transition hover:-translate-y-0.5 ${signalClasses(signal.tone)}`}>
-              <div className="flex items-start justify-between gap-4">
-                <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${signalDot(signal.tone)}`} />
-                <strong className="text-3xl font-medium tracking-[-0.04em]">{signal.value}</strong>
-              </div>
-              <h3 className="mt-6 text-sm font-semibold text-[var(--foreground)]">{signal.title}</h3>
-              <p className="mt-2 text-xs leading-5 text-[var(--muted)]">{signal.detail}</p>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      <section className="mt-7 border border-[var(--line)]">
-        <div className="flex flex-col gap-3 border-b border-[var(--line)] p-5 md:flex-row md:items-end md:justify-between md:p-6">
-          <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Operational timeline</p>
-            <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Live EPC journey</h2>
-          </div>
-          <span className="text-xs text-[var(--muted)]">{activeProjects.length} active projects across {pipeline.filter((stage) => stage.count > 0).length} stages</span>
-        </div>
-        <div className="overflow-x-auto p-5 md:p-6">
-          <div className="grid min-w-[760px] grid-cols-8 border border-[var(--line)]">
-            {pipeline.map((stage, index) => (
-              <div key={stage.key} className="relative border-r border-[var(--line)] p-4 last:border-r-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-semibold tabular-nums text-[var(--muted)]">{String(index + 1).padStart(2, "0")}</span>
-                  <span className={`h-1.5 w-1.5 rounded-full ${stage.count ? "bg-[var(--accent)]" : "bg-[var(--line)]"}`} />
-                </div>
-                <p className="mt-7 text-xs font-semibold">{stage.short}</p>
-                <p className="mt-2 text-3xl font-medium tracking-[-0.04em]">{stage.count}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.55fr)_minmax(330px,0.65fr)]">
-        <article className="border border-[var(--line)]">
-          <div className="flex items-start justify-between gap-5 border-b border-[var(--line)] p-5 md:p-6">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Project pipeline</p>
-              <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Stage distribution</h2>
+      <section className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.25fr)_minmax(330px,0.75fr)]">
+        <div className="space-y-7">
+          <article className="border border-[var(--line)]">
+            <div className="flex items-end justify-between gap-4 border-b border-[var(--line)] p-5 md:px-6">
+              <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Post-contract only</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Delivery pipeline</h2></div>
+              <Link href="/dashboard/projects" className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)]">Open Projects</Link>
             </div>
-            <span className="text-xs tabular-nums text-[var(--muted)]">{activeProjects.length} active</span>
-          </div>
-          <div className="p-5 md:p-6">
-            {activeProjects.length ? (
-              <div className="space-y-4">
-                {pipeline.map((stage) => (
-                  <div key={stage.key} className="grid grid-cols-[105px_minmax(0,1fr)_28px] items-center gap-3 sm:grid-cols-[125px_minmax(0,1fr)_32px]">
-                    <span className="text-xs text-[var(--muted)]">{stage.label}</span>
-                    <div className="h-7 bg-black/[0.035]">
-                      <div className="flex h-full min-w-0 items-center bg-[var(--foreground)] transition-all" style={{ width: stage.count ? `${Math.max((stage.count / pipelineMax) * 100, 8)}%` : "0%" }} />
-                    </div>
-                    <span className="text-right text-xs font-semibold tabular-nums">{stage.count}</span>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="border border-dashed border-[var(--line)] px-6 py-14 text-center">
-                <p className="text-sm font-semibold">Your EPC pipeline is ready</p>
-                <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-[var(--muted)]">Projects will appear here as they move from qualification through survey, design, delivery and handover.</p>
-                <Link href="/dashboard/projects" className="mt-6 inline-block border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Enter project workspace</Link>
-              </div>
-            )}
-          </div>
-        </article>
-
-        <article className="border border-[var(--line)]">
-          <div className="border-b border-[var(--line)] p-5 md:p-6">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Control pulse</p>
-            <h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Portfolio state</h2>
-          </div>
-          <div className="divide-y divide-[var(--line)]">
-            <div className="flex items-center justify-between p-5 md:px-6"><span className="text-sm text-[var(--muted)]">Customers</span><strong className="text-lg tabular-nums">{customersResult.count ?? 0}</strong></div>
-            <div className="flex items-center justify-between p-5 md:px-6"><span className="text-sm text-[var(--muted)]">Controlled documents</span><strong className="text-lg tabular-nums">{documentsResult.count ?? 0}</strong></div>
-            <div className="flex items-center justify-between p-5 md:px-6"><span className="text-sm text-[var(--muted)]">30-day completions</span><strong className="text-lg tabular-nums">{upcomingCompletions.length}</strong></div>
-            <div className="p-5 md:px-6">
-              <div className="flex items-center gap-3"><span className="h-2 w-2 rounded-full bg-emerald-600" /><strong className="text-sm">Organisation controls active</strong></div>
-              <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Identity, tenancy and row-level access remain enforced across this workspace.</p>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <section className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
-        <article className="border border-[var(--line)]">
-          <div className="flex items-center justify-between border-b border-[var(--line)] p-5 md:p-6">
-            <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Portfolio watch</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Recent projects</h2></div>
-            <Link href="/dashboard/projects" className="text-xs font-semibold text-[var(--muted)] hover:text-[var(--foreground)]">View all</Link>
-          </div>
-          {projects.length ? (
-            <div className="divide-y divide-[var(--line)]">
-              {projects.slice(0, 5).map((project) => (
-                <div key={project.id} className="grid gap-4 p-5 md:grid-cols-[minmax(0,1fr)_120px_105px] md:items-center md:px-6">
-                  <div className="min-w-0"><div className="flex items-center gap-3"><span className={`h-2 w-2 shrink-0 rounded-full ${riskClasses(project.risk_status)}`} /><p className="truncate text-sm font-semibold">{project.name}</p></div><p className="mt-1 pl-5 text-xs text-[var(--muted)]">{project.reference}</p></div>
-                  <span className="text-xs text-[var(--muted)]">{titleCase(project.status)}</span>
-                  <span className="text-xs tabular-nums text-[var(--muted)] md:text-right">{project.target_completion_date ? dateFormatter.format(new Date(project.target_completion_date)) : "No target"}</span>
-                </div>
+            <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4">
+              {stageCounts.map((item) => (
+                <div key={item.stage} className="bg-[var(--background)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{titleCase(item.stage)}</p><p className="mt-5 text-3xl font-medium">{item.count}</p></div>
               ))}
             </div>
-          ) : <div className="px-6 py-12 text-center text-sm text-[var(--muted)]">No project records have been created yet.</div>}
-        </article>
+            {legacyProjects.length ? <div className="border-t border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"><span className="font-semibold">{legacyProjects.length} legacy Project record{legacyProjects.length === 1 ? " is" : "s are"} still in pre-contract stage values.</span> Open the Project register and migrate them deliberately after confirming their commercial basis.</div> : null}
+          </article>
 
-        <article className="border border-[var(--line)]">
-          <div className="border-b border-[var(--line)] p-5 md:p-6"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Evidence trail</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Recent activity</h2></div>
-          {activities.length ? (
-            <div className="divide-y divide-[var(--line)]">
-              {activities.map((activity) => (
-                <div key={activity.id} className="p-5 md:px-6"><div className="flex items-start justify-between gap-4"><p className="text-sm font-semibold">{titleCase(activity.event_type)}</p><span className="shrink-0 text-[10px] tabular-nums text-[var(--muted)]">{dateFormatter.format(new Date(activity.created_at))}</span></div><p className="mt-2 text-xs leading-5 text-[var(--muted)]">{activity.description}</p></div>
-              ))}
+          <article className="border border-[var(--line)]">
+            <div className="flex items-end justify-between gap-4 border-b border-[var(--line)] p-5 md:px-6">
+              <div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Recent activity</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Audit trail</h2></div>
+              <span className="text-xs text-[var(--muted)]">{activities.length} recent</span>
             </div>
-          ) : <div className="px-6 py-12 text-center text-sm text-[var(--muted)]">Governed workspace activity will appear here.</div>}
-        </article>
+            {activities.length ? <div className="divide-y divide-[var(--line)]">{activities.map((activity) => <div key={activity.id} className="grid gap-2 p-5 md:grid-cols-[150px_minmax(0,1fr)_100px] md:px-6"><p className="text-xs font-semibold">{titleCase(activity.event_type)}</p><p className="text-xs leading-5 text-[var(--muted)]">{activity.description}</p><p className="text-xs text-[var(--muted)] md:text-right">{date.format(new Date(activity.created_at))}</p></div>)}</div> : <div className="p-6 text-sm text-[var(--muted)]">No recent activity.</div>}
+          </article>
+        </div>
+
+        <aside className="space-y-7">
+          <article className="border border-[var(--line)]">
+            <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Attention</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Operating exceptions</h2></div>
+            <div className="divide-y divide-[var(--line)]">
+              <Link href="/dashboard/tasks" className="flex items-center justify-between gap-4 p-5 hover:bg-white/40"><div><p className="text-sm font-semibold">Overdue actions</p><p className="mt-1 text-xs text-[var(--muted)]">Across commercial, engineering and delivery.</p></div><strong className={overdueTasks ? "text-2xl text-[var(--accent)]" : "text-2xl"}>{overdueTasks}</strong></Link>
+              <Link href="/dashboard/projects" className="flex items-center justify-between gap-4 p-5 hover:bg-white/40"><div><p className="text-sm font-semibold">Red-risk delivery projects</p><p className="mt-1 text-xs text-[var(--muted)]">Post-contract execution requiring attention.</p></div><strong className={redRiskProjects.length ? "text-2xl text-[var(--accent)]" : "text-2xl"}>{redRiskProjects.length}</strong></Link>
+              <Link href="/dashboard/tasks" className="flex items-center justify-between gap-4 p-5 hover:bg-white/40"><div><p className="text-sm font-semibold">Open actions</p><p className="mt-1 text-xs text-[var(--muted)]">Total accountable work not complete.</p></div><strong className="text-2xl">{openTasks}</strong></Link>
+            </div>
+          </article>
+
+          <article className="border border-[var(--line)] p-5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Core rule</p>
+            <p className="mt-4 text-lg font-medium leading-7">No Project before signed contract.</p>
+            <p className="mt-3 text-sm leading-6 text-[var(--muted)]">Opportunity and Engineering own all pre-contract work. The Project workspace starts only when the commercial commitment is formally converted into delivery.</p>
+          </article>
+        </aside>
       </section>
     </div>
   );

@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { updateProjectControl } from "../actions";
 
-const stages = ["qualification", "survey", "design", "commercial", "procurement", "installation", "commissioning", "handover", "complete", "on_hold"];
+const stages = ["procurement", "installation", "commissioning", "handover", "complete", "on_hold"];
 const risks = ["green", "amber", "red"];
-const tabs = ["Summary", "Commercial", "Survey", "Engineering", "Procurement", "Installation", "Quality", "Commissioning", "Handover", "Documents", "Tasks", "Activity"];
+const tabs = ["Summary", "Contract", "Approved Design", "Procurement", "Installation", "Quality", "Commissioning", "Handover", "Documents", "Tasks", "Activity"];
 
 const currency = new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP", maximumFractionDigits: 0 });
 const date = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -47,13 +47,16 @@ export default async function ProjectWorkspacePage({ params, searchParams }: Pro
 
   const openTasks = (tasks ?? []).filter((task) => task.status !== "complete");
   const overdueTasks = openTasks.filter((task) => task.due_date && new Date(task.due_date) < new Date());
+  const legacyStage = !stages.includes(project.status);
   const nextDecision = project.risk_status === "red"
-    ? "Resolve the red-risk condition before advancing the lifecycle stage."
-    : overdueTasks.length
-      ? `Close or replan ${overdueTasks.length} overdue action${overdueTasks.length === 1 ? "" : "s"}.`
-      : project.status === "complete"
-        ? "Confirm final evidence retention and O&M ownership."
-        : `Confirm readiness to progress beyond ${titleCase(project.status)}.`;
+    ? "Resolve the red-risk condition before advancing the delivery stage."
+    : legacyStage
+      ? "This record predates the contract-gated Project model. Move it into a valid post-contract delivery stage after confirming the signed commercial basis."
+      : overdueTasks.length
+        ? `Close or replan ${overdueTasks.length} overdue action${overdueTasks.length === 1 ? "" : "s"}.`
+        : project.status === "complete"
+          ? "Confirm final evidence retention and O&M ownership."
+          : `Confirm readiness to progress beyond ${titleCase(project.status)}.`;
 
   return (
     <div className="mx-auto max-w-[1500px]">
@@ -62,10 +65,10 @@ export default async function ProjectWorkspacePage({ params, searchParams }: Pro
           <div>
             <div className="flex items-center gap-3">
               <span className={`h-2 w-2 rounded-full ${riskClass(project.risk_status)}`} />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">{project.reference} · {titleCase(project.status)}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Post-contract Project · {project.reference}</p>
             </div>
             <h1 className="mt-3 text-4xl font-medium tracking-[-0.045em] md:text-5xl">{project.name}</h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">{customer?.name ?? "Customer"} · {site?.name ?? "Site"}{site?.postcode ? ` · ${site.postcode}` : ""}</p>
+            <p className="mt-4 max-w-2xl text-sm leading-6 text-[var(--muted)]">{customer?.name ?? "Customer"} · {site?.name ?? "Site"}{site?.postcode ? ` · ${site.postcode}` : ""} · {titleCase(project.status)}</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Link href="/dashboard/projects" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Project register</Link>
@@ -75,7 +78,8 @@ export default async function ProjectWorkspacePage({ params, searchParams }: Pro
       </header>
 
       {messages.error ? <div className="mt-6 border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">{messages.error}</div> : null}
-      {messages.updated ? <div className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Project control updated and recorded in the activity trail.</div> : null}
+      {messages.updated ? <div className="mt-6 border border-emerald-300 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">Project delivery control updated and recorded in the activity trail.</div> : null}
+      {legacyStage ? <div className="mt-6 border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900"><span className="font-semibold">Legacy lifecycle state:</span> {titleCase(project.status)} is a pre-contract stage and is no longer part of the Project delivery lifecycle.</div> : null}
 
       <nav className="mt-7 overflow-x-auto border-y border-[var(--line)]" aria-label="Project workspace">
         <div className="flex min-w-max">
@@ -83,11 +87,13 @@ export default async function ProjectWorkspacePage({ params, searchParams }: Pro
         </div>
       </nav>
 
+      <div className="mt-4 border border-[var(--line)] px-4 py-3 text-xs leading-5 text-[var(--muted)]"><span className="font-semibold text-[var(--foreground)]">Inherited basis:</span> signed contract + approved engineering revision. Survey, Calculator and Detailed Design remain upstream records; this workspace governs execution.</div>
+
       <section className="mt-7 grid gap-px border border-[var(--line)] bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">
         {[
           ["Contract value", project.contract_value_gbp ? currency.format(Number(project.contract_value_gbp)) : "Not set"],
-          ["PV capacity", project.pv_capacity_kwp ? `${Number(project.pv_capacity_kwp).toLocaleString("en-GB")} kWp` : "Not set"],
-          ["BESS capacity", project.battery_capacity_kwh ? `${Number(project.battery_capacity_kwh).toLocaleString("en-GB")} kWh` : "Not set"],
+          ["Approved PV", project.pv_capacity_kwp ? `${Number(project.pv_capacity_kwp).toLocaleString("en-GB")} kWp` : "Not set"],
+          ["Approved BESS", project.battery_capacity_kwh ? `${Number(project.battery_capacity_kwh).toLocaleString("en-GB")} kWh` : "Not set"],
           ["Target completion", project.target_completion_date ? date.format(new Date(project.target_completion_date)) : "Not set"],
           ["Project owner", owner?.full_name ?? "Unassigned"],
         ].map(([label, value]) => (
@@ -101,13 +107,13 @@ export default async function ProjectWorkspacePage({ params, searchParams }: Pro
       <section className="mt-7 grid gap-7 xl:grid-cols-[minmax(0,1.35fr)_minmax(330px,0.65fr)]">
         <div className="space-y-7">
           <article className="border border-[var(--line)]">
-            <div className="border-b border-[var(--line)] p-5 md:px-6"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Executive control</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Next required decision</h2></div>
+            <div className="border-b border-[var(--line)] p-5 md:px-6"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Delivery control</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Next required decision</h2></div>
             <div className="p-5 md:p-6"><p className="max-w-3xl text-lg leading-8">{nextDecision}</p>{project.notes ? <p className="mt-5 border-l-2 border-[var(--accent)] pl-4 text-sm leading-6 text-[var(--muted)]">{project.notes}</p> : null}</div>
           </article>
 
           <article className="border border-[var(--line)]">
-            <div className="flex items-center justify-between border-b border-[var(--line)] p-5 md:px-6"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Accountability</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Open project actions</h2></div><span className="text-xs tabular-nums text-[var(--muted)]">{openTasks.length} open</span></div>
-            {tasks?.length ? <div className="divide-y divide-[var(--line)]">{tasks.map((task) => <div key={task.id} className="grid gap-2 p-5 md:grid-cols-[minmax(0,1fr)_120px_120px] md:px-6"><p className="text-sm font-semibold">{task.title}</p><span className="text-xs text-[var(--muted)]">{titleCase(task.status)}</span><span className="text-xs tabular-nums text-[var(--muted)] md:text-right">{task.due_date ? date.format(new Date(task.due_date)) : "No due date"}</span></div>)}</div> : <div className="px-6 py-12 text-sm text-[var(--muted)]">No project actions have been recorded.</div>}
+            <div className="flex items-center justify-between border-b border-[var(--line)] p-5 md:px-6"><div><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Accountability</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Open delivery actions</h2></div><span className="text-xs tabular-nums text-[var(--muted)]">{openTasks.length} open</span></div>
+            {tasks?.length ? <div className="divide-y divide-[var(--line)]">{tasks.map((task) => <div key={task.id} className="grid gap-2 p-5 md:grid-cols-[minmax(0,1fr)_120px_120px] md:px-6"><p className="text-sm font-semibold">{task.title}</p><span className="text-xs text-[var(--muted)]">{titleCase(task.status)}</span><span className="text-xs tabular-nums text-[var(--muted)] md:text-right">{task.due_date ? date.format(new Date(task.due_date)) : "No due date"}</span></div>)}</div> : <div className="px-6 py-12 text-sm text-[var(--muted)]">No delivery actions have been recorded.</div>}
           </article>
 
           <article className="border border-[var(--line)]">
@@ -118,13 +124,13 @@ export default async function ProjectWorkspacePage({ params, searchParams }: Pro
 
         <aside className="space-y-7">
           <form action={updateProjectControl} className="border border-[var(--line)]">
-            <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Lifecycle authority</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Update control state</h2></div>
+            <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Delivery authority</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Update delivery state</h2></div>
             <div className="space-y-5 p-5">
               <input type="hidden" name="project_id" value={project.id} />
-              <label className="block text-xs font-semibold">Project stage<select name="status" defaultValue={project.status} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{stages.map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}</select></label>
+              <label className="block text-xs font-semibold">Delivery stage<select name="status" defaultValue={legacyStage ? "procurement" : project.status} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{stages.map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}</select></label>
               <label className="block text-xs font-semibold">Risk status<select name="risk_status" defaultValue={project.risk_status} className="mt-2 min-h-11 w-full border border-[var(--line)] bg-[var(--background)] px-3 text-sm font-normal">{risks.map((item) => <option key={item} value={item}>{titleCase(item)}</option>)}</select></label>
-              <button className="min-h-11 w-full border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white">Record control update</button>
-              <p className="text-xs leading-5 text-[var(--muted)]">Every material stage or risk change is written to the governed activity trail.</p>
+              <button className="min-h-11 w-full border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)] hover:bg-[var(--accent)] hover:text-white">Record delivery update</button>
+              <p className="text-xs leading-5 text-[var(--muted)]">Every delivery-stage or risk change is written to the governed activity trail.</p>
             </div>
           </form>
 
