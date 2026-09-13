@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "latest",
+    "@neondatabase/auth": "latest",
+    "@neondatabase/neon-js": "latest",
     "@radix-ui/react-dialog": "latest",
     "@radix-ui/react-slot": "latest",
     "@supabase/ssr": "latest",
