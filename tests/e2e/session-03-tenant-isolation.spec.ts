@@ -55,6 +55,7 @@ test("Tenant A and Tenant B are isolated through the real Neon application path"
   await expect(page.getByText(tenantAOpportunityMarker, { exact: true })).toBeVisible();
 
   await page.goto(`/dashboard/customers/${tenantBCustomerId}`);
+  await expect(page.getByTestId("customer-record-unavailable")).toBeVisible();
   await expect(page.getByText(tenantBMarker, { exact: true })).toHaveCount(0);
 
   await signOut(page);
@@ -74,5 +75,6 @@ test("Tenant A and Tenant B are isolated through the real Neon application path"
   await expect(page.getByText(tenantAOpportunityMarker, { exact: true })).toHaveCount(0);
 
   await page.goto(`/dashboard/customers/${tenantACustomerId}`);
+  await expect(page.getByTestId("customer-record-unavailable")).toBeVisible();
   await expect(page.getByText(tenantAMarker, { exact: true })).toHaveCount(0);
 });
