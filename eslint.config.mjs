@@ -11,5 +11,15 @@ export default defineConfig([
       "@next/next/no-assign-module-variable": "off",
     },
   },
+  {
+    files: [
+      "src/lib/neon/load-profiles.ts",
+      "src/app/dashboard/engineering/page.tsx",
+      "src/app/dashboard/engineering/load-profiles/**/page.tsx",
+    ],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   globalIgnores([".next/**", "out/**", "build/**", "next-env.d.ts"]),
 ]);
