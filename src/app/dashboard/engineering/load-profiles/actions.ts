@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { summarizeApplianceSchedule, summarizeUtilityBills } from "@/lib/engineering/load-profile";
 import type { LoadProfileAppliance, LoadProfileUtilityBill } from "@/lib/engineering/types";
 

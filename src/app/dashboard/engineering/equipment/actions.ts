@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 
 const equipmentTabs = ["manufacturers", "modules", "inverters", "batteries", "compatibility"] as const;
 type EquipmentTab = (typeof equipmentTabs)[number];

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { createSite } from "../../customers/actions";
 
 type SearchParams = Promise<{ customer?: string; error?: string; created?: string }>;

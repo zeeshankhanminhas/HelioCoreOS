@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { WorkspaceShell } from "./_components/workspace-shell";
 
 type ProfileWithOrganisation = {

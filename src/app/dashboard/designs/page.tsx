@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { DesignRegister, type DesignRegisterRow } from "./design-register";
 
 function relationName(value: unknown, fallback: string) {
