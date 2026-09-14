@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/neon/client";
 
 const deliveryStages = ["procurement", "installation", "commissioning", "handover"] as const;
 const date = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric" });
@@ -9,42 +12,86 @@ function titleCase(value: string) {
   return value.replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
-export default async function DashboardPage() {
-  const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
+type Opportunity = { id: string; reference: string; title: string; stage: string; estimated_value_gbp: number | string | null; created_at: string };
+type EngineeringIntake = { id: string; opportunity_id: string; status: string; system_type: string; load_profile_id: string | null; created_at: string };
+type Calculation = { id: string; engineering_intake_id: string; revision: number; created_at: string };
+type Project = { id: string; name: string; reference: string; status: string; risk_status: string; contract_value_gbp: number | string | null; target_completion_date: string | null; updated_at: string };
+type Activity = { id: string | number; event_type: string; description: string; created_at: string };
 
-  const [opportunitiesResult, engineeringResult, calculationsResult, projectsResult, openTasksResult, overdueTasksResult, activityResult] = await Promise.all([
-    supabase.from("opportunities").select("id,reference,title,stage,estimated_value_gbp,created_at").order("updated_at", { ascending: false }).limit(50),
-    supabase.from("engineering_intakes").select("id,opportunity_id,status,system_type,load_profile_id,created_at").order("created_at", { ascending: false }).limit(50),
-    supabase.from("engineering_calculations").select("id,engineering_intake_id,revision,created_at").order("created_at", { ascending: false }).limit(100),
-    supabase.from("projects").select("id,name,reference,status,risk_status,contract_value_gbp,target_completion_date,updated_at").order("updated_at", { ascending: false }).limit(50),
-    supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "complete"),
-    supabase.from("tasks").select("id", { count: "exact", head: true }).neq("status", "complete").lt("due_date", today),
-    supabase.from("activity_logs").select("id,event_type,description,created_at").order("created_at", { ascending: false }).limit(8),
-  ]);
+export default function DashboardPage() {
+  const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [engineering, setEngineering] = useState<EngineeringIntake[]>([]);
+  const [calculations, setCalculations] = useState<Calculation[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [openTasks, setOpenTasks] = useState(0);
+  const [overdueTasks, setOverdueTasks] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
-  const opportunities = opportunitiesResult.data ?? [];
-  const engineering = engineeringResult.data ?? [];
-  const calculations = calculationsResult.data ?? [];
-  const projects = projectsResult.data ?? [];
-  const activities = activityResult.data ?? [];
+  useEffect(() => {
+    let cancelled = false;
 
-  const openOpportunities = opportunities.filter((item) => item.stage !== "won" && item.stage !== "lost");
-  const proposalStage = openOpportunities.filter((item) => item.stage === "proposal");
-  const activeEngineering = engineering.filter((item) => item.status !== "superseded");
-  const readyForCalculator = activeEngineering.filter((item) => item.status === "ready");
-  const intakeIdsWithCalculation = new Set(calculations.map((item) => item.engineering_intake_id));
-  const calculatorStarted = activeEngineering.filter((item) => intakeIdsWithCalculation.has(item.id));
-  const deliveryProjects = projects.filter((item) => deliveryStages.includes(item.status as (typeof deliveryStages)[number]));
-  const legacyProjects = projects.filter((item) => !deliveryStages.includes(item.status as (typeof deliveryStages)[number]) && item.status !== "complete" && item.status !== "on_hold");
-  const redRiskProjects = deliveryProjects.filter((item) => item.risk_status === "red");
-  const overdueTasks = overdueTasksResult.count ?? 0;
-  const openTasks = openTasksResult.count ?? 0;
-  const deliveryValue = deliveryProjects.reduce((sum, item) => sum + Number(item.contract_value_gbp ?? 0), 0);
+    async function loadDashboard() {
+      const client = createClient();
+      const today = new Date().toISOString().slice(0, 10);
+
+      const [opportunitiesResult, projectsResult, openTasksResult, overdueTasksResult, activityResult] = await Promise.all([
+        client.from("opportunities").select("id,reference,title,stage,estimated_value_gbp,created_at").order("updated_at", { ascending: false }).limit(50),
+        client.from("projects").select("id,name,reference,status,risk_status,contract_value_gbp,target_completion_date,updated_at").order("updated_at", { ascending: false }).limit(50),
+        client.from("tasks").select("id", { count: "exact", head: true }).neq("status", "complete"),
+        client.from("tasks").select("id", { count: "exact", head: true }).neq("status", "complete").lt("due_date", today),
+        client.from("activity_logs").select("id,event_type,description,created_at").order("created_at", { ascending: false }).limit(8),
+      ]);
+
+      if (cancelled) return;
+
+      const coreError = opportunitiesResult.error || projectsResult.error || openTasksResult.error || overdueTasksResult.error || activityResult.error;
+      if (coreError) {
+        setError(coreError.message || "The dashboard could not be loaded.");
+      }
+
+      setOpportunities((opportunitiesResult.data ?? []) as Opportunity[]);
+      setProjects((projectsResult.data ?? []) as Project[]);
+      setOpenTasks(openTasksResult.count ?? 0);
+      setOverdueTasks(overdueTasksResult.count ?? 0);
+      setActivities((activityResult.data ?? []) as Activity[]);
+
+      // Engineering tables are promoted separately from the core workspace schema.
+      // Query them opportunistically so the dashboard remains available during migration.
+      const [engineeringResult, calculationsResult] = await Promise.all([
+        client.from("engineering_intakes").select("id,opportunity_id,status,system_type,load_profile_id,created_at").order("created_at", { ascending: false }).limit(50),
+        client.from("engineering_calculations").select("id,engineering_intake_id,revision,created_at").order("created_at", { ascending: false }).limit(100),
+      ]);
+
+      if (cancelled) return;
+      setEngineering((engineeringResult.data ?? []) as EngineeringIntake[]);
+      setCalculations((calculationsResult.data ?? []) as Calculation[]);
+    }
+
+    void loadDashboard();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const computed = useMemo(() => {
+    const openOpportunities = opportunities.filter((item) => item.stage !== "won" && item.stage !== "lost");
+    const proposalStage = openOpportunities.filter((item) => item.stage === "proposal");
+    const activeEngineering = engineering.filter((item) => item.status !== "superseded");
+    const readyForCalculator = activeEngineering.filter((item) => item.status === "ready");
+    const intakeIdsWithCalculation = new Set(calculations.map((item) => item.engineering_intake_id));
+    const calculatorStarted = activeEngineering.filter((item) => intakeIdsWithCalculation.has(item.id));
+    const deliveryProjects = projects.filter((item) => deliveryStages.includes(item.status as (typeof deliveryStages)[number]));
+    const legacyProjects = projects.filter((item) => !deliveryStages.includes(item.status as (typeof deliveryStages)[number]) && item.status !== "complete" && item.status !== "on_hold");
+    const redRiskProjects = deliveryProjects.filter((item) => item.risk_status === "red");
+    const deliveryValue = deliveryProjects.reduce((sum, item) => sum + Number(item.contract_value_gbp ?? 0), 0);
+
+    return { openOpportunities, proposalStage, activeEngineering, readyForCalculator, calculatorStarted, deliveryProjects, legacyProjects, redRiskProjects, deliveryValue };
+  }, [opportunities, engineering, calculations, projects]);
 
   const stageCounts = deliveryStages.map((stage) => ({
     stage,
-    count: deliveryProjects.filter((project) => project.status === stage).length,
+    count: computed.deliveryProjects.filter((project) => project.status === stage).length,
   }));
 
   const operatingSequence = [
@@ -58,14 +105,14 @@ export default async function DashboardPage() {
   ];
 
   const metrics = [
-    { label: "Open opportunities", value: String(openOpportunities.length), note: `${proposalStage.length} at proposal stage`, href: "/dashboard/opportunities" },
-    { label: "Engineering intakes", value: String(activeEngineering.length), note: `${readyForCalculator.length} load profiles ready`, href: "/dashboard/engineering" },
-    { label: "Calculator started", value: String(calculatorStarted.length), note: `${calculations.length} saved sizing revisions`, href: "/dashboard/engineering" },
-    { label: "Delivery projects", value: String(deliveryProjects.length), note: currency.format(deliveryValue), href: "/dashboard/projects" },
+    { label: "Open opportunities", value: String(computed.openOpportunities.length), note: `${computed.proposalStage.length} at proposal stage`, href: "/dashboard/opportunities" },
+    { label: "Engineering intakes", value: String(computed.activeEngineering.length), note: `${computed.readyForCalculator.length} load profiles ready`, href: "/dashboard/engineering" },
+    { label: "Calculator started", value: String(computed.calculatorStarted.length), note: `${calculations.length} saved sizing revisions`, href: "/dashboard/engineering" },
+    { label: "Delivery projects", value: String(computed.deliveryProjects.length), note: currency.format(computed.deliveryValue), href: "/dashboard/projects" },
   ];
 
   return (
-    <div className="mx-auto max-w-[1500px]">
+    <div className="mx-auto max-w-[1500px]" data-testid="dashboard-neon-runtime">
       <header className="flex flex-col gap-6 border-b border-[var(--line)] pb-7 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--accent)]">Operating command centre</p>
@@ -77,6 +124,8 @@ export default async function DashboardPage() {
           <Link href="/dashboard/engineering" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 py-2.5 text-xs font-semibold">Open Engineering</Link>
         </div>
       </header>
+
+      {error ? <div className="mt-7 border border-red-300 bg-red-50 px-5 py-4 text-sm text-red-800">{error}</div> : null}
 
       <section className="mt-7 border border-[var(--line)]">
         <div className="border-b border-[var(--line)] p-5 md:px-6">
@@ -117,7 +166,7 @@ export default async function DashboardPage() {
                 <div key={item.stage} className="bg-[var(--background)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">{titleCase(item.stage)}</p><p className="mt-5 text-3xl font-medium">{item.count}</p></div>
               ))}
             </div>
-            {legacyProjects.length ? <div className="border-t border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"><span className="font-semibold">{legacyProjects.length} legacy Project record{legacyProjects.length === 1 ? " is" : "s are"} still in pre-contract stage values.</span> Open the Project register and migrate them deliberately after confirming their commercial basis.</div> : null}
+            {computed.legacyProjects.length ? <div className="border-t border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"><span className="font-semibold">{computed.legacyProjects.length} legacy Project record{computed.legacyProjects.length === 1 ? " is" : "s are"} still in pre-contract stage values.</span></div> : null}
           </article>
 
           <article className="border border-[var(--line)]">
@@ -134,7 +183,7 @@ export default async function DashboardPage() {
             <div className="border-b border-[var(--line)] p-5"><p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">Attention</p><h2 className="mt-2 text-2xl font-medium tracking-[-0.03em]">Operating exceptions</h2></div>
             <div className="divide-y divide-[var(--line)]">
               <Link href="/dashboard/tasks" className="flex items-center justify-between gap-4 p-5 hover:bg-white/40"><div><p className="text-sm font-semibold">Overdue actions</p><p className="mt-1 text-xs text-[var(--muted)]">Across commercial, engineering and delivery.</p></div><strong className={overdueTasks ? "text-2xl text-[var(--accent)]" : "text-2xl"}>{overdueTasks}</strong></Link>
-              <Link href="/dashboard/projects" className="flex items-center justify-between gap-4 p-5 hover:bg-white/40"><div><p className="text-sm font-semibold">Red-risk delivery projects</p><p className="mt-1 text-xs text-[var(--muted)]">Post-contract execution requiring attention.</p></div><strong className={redRiskProjects.length ? "text-2xl text-[var(--accent)]" : "text-2xl"}>{redRiskProjects.length}</strong></Link>
+              <Link href="/dashboard/projects" className="flex items-center justify-between gap-4 p-5 hover:bg-white/40"><div><p className="text-sm font-semibold">Red-risk delivery projects</p><p className="mt-1 text-xs text-[var(--muted)]">Post-contract execution requiring attention.</p></div><strong className={computed.redRiskProjects.length ? "text-2xl text-[var(--accent)]" : "text-2xl"}>{computed.redRiskProjects.length}</strong></Link>
               <Link href="/dashboard/tasks" className="flex items-center justify-between gap-4 p-5 hover:bg-white/40"><div><p className="text-sm font-semibold">Open actions</p><p className="mt-1 text-xs text-[var(--muted)]">Total accountable work not complete.</p></div><strong className="text-2xl">{openTasks}</strong></Link>
             </div>
           </article>
