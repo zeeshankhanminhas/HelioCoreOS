@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { saveAuthoritativeCalculatorRevision } from "@/lib/neon/calculators";
+import { approveLatestCalculatorRevision, returnLatestCalculatorRevision, saveAuthoritativeCalculatorRevision } from "@/lib/neon/calculators";
 
 function text(fd: FormData, key: string) {
   return String(fd.get(key) ?? "").trim();
@@ -43,5 +43,32 @@ export async function saveCalculatorRevision(fd: FormData) {
     redirect(`/dashboard/engineering/calculators/${intakeId}?saved=${revision.revision}&authority=${encodeURIComponent(revision.engineVersion)}`);
   } catch (error) {
     fail(intakeId, error instanceof Error ? error.message : "Calculator revision could not be saved.");
+  }
+}
+
+export async function approveCalculatorRevision(fd: FormData) {
+  const intakeId = text(fd, "engineering_intake_id");
+  const calculationId = text(fd, "calculation_id");
+  if (!intakeId || !calculationId) fail(intakeId || "missing", "Calculator review context is incomplete.");
+  try {
+    await approveLatestCalculatorRevision(intakeId, calculationId, text(fd, "review_note"));
+    revalidatePath("/dashboard/engineering");
+    revalidatePath(`/dashboard/engineering/calculators/${intakeId}`);
+    redirect(`/dashboard/engineering/calculators/${intakeId}?approved=1`);
+  } catch (error) {
+    fail(intakeId, error instanceof Error ? error.message : "Calculator revision could not be approved.");
+  }
+}
+
+export async function returnCalculatorRevision(fd: FormData) {
+  const intakeId = text(fd, "engineering_intake_id");
+  const calculationId = text(fd, "calculation_id");
+  if (!intakeId || !calculationId) fail(intakeId || "missing", "Calculator review context is incomplete.");
+  try {
+    await returnLatestCalculatorRevision(intakeId, calculationId, text(fd, "review_note"));
+    revalidatePath(`/dashboard/engineering/calculators/${intakeId}`);
+    redirect(`/dashboard/engineering/calculators/${intakeId}?returned=1`);
+  } catch (error) {
+    fail(intakeId, error instanceof Error ? error.message : "Calculator revision could not be returned for revision.");
   }
 }

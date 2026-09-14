@@ -3,6 +3,18 @@ import { runPreliminarySizing } from "@/lib/engineering/heliocalc-client";
 import type { CalculatorInputs, CalculatorResult } from "@/lib/engineering/calculator";
 import type { EngineeringValidation, SystemType } from "@/lib/engineering/types";
 
+export type CalculatorRevision = {
+  id: string;
+  calculation_reference: string;
+  revision: number;
+  status: "draft" | "reviewed";
+  engine_version: string;
+  input_snapshot: Record<string, unknown>;
+  result_snapshot: CalculatorResult;
+  validation_snapshot: EngineeringValidation[];
+  created_at: string;
+};
+
 export type CalculatorWorkspaceRecord = {
   intake: {
     id: string;
@@ -25,17 +37,8 @@ export type CalculatorWorkspaceRecord = {
     peak_demand_kw: number | string | null;
     essential_peak_demand_kw: number | string | null;
   };
-  revisions: Array<{
-    id: string;
-    calculation_reference: string;
-    revision: number;
-    status: string;
-    engine_version: string;
-    input_snapshot: Record<string, unknown>;
-    result_snapshot: CalculatorResult;
-    validation_snapshot: EngineeringValidation[];
-    created_at: string;
-  }>;
+  revisions: CalculatorRevision[];
+  reviewer: { role: string; canReview: boolean };
 };
 
 async function context() {
@@ -46,18 +49,25 @@ async function context() {
 
   const { data: profile, error } = await client
     .from("profiles")
-    .select("id,organisation_id,status")
+    .select("id,organisation_id,status,role")
     .eq("id", user.id)
     .single();
 
   if (error || !profile?.organisation_id) throw new Error("Organisation context is unavailable.");
   if (profile.status !== "active") throw new Error("This user is not active in the organisation.");
 
-  return { client, userId: user.id, organisationId: profile.organisation_id as string };
+  const role = String(profile.role ?? "member").toLowerCase();
+  return {
+    client,
+    userId: user.id,
+    organisationId: profile.organisation_id as string,
+    role,
+    canReview: ["owner", "admin", "manager"].includes(role),
+  };
 }
 
 export async function loadCalculatorWorkspace(intakeId: string): Promise<CalculatorWorkspaceRecord> {
-  const { client } = await context();
+  const { client, role, canReview } = await context();
 
   const { data: intake, error: intakeError } = await client
     .from("engineering_intakes")
@@ -88,7 +98,8 @@ export async function loadCalculatorWorkspace(intakeId: string): Promise<Calcula
     opportunity: opportunityResult.data as CalculatorWorkspaceRecord["opportunity"],
     site: siteResult.data as CalculatorWorkspaceRecord["site"],
     load: loadResult.data as CalculatorWorkspaceRecord["load"],
-    revisions: (revisionsResult.data ?? []) as CalculatorWorkspaceRecord["revisions"],
+    revisions: (revisionsResult.data ?? []) as CalculatorRevision[],
+    reviewer: { role, canReview },
   };
 }
 
@@ -97,12 +108,11 @@ export async function saveAuthoritativeCalculatorRevision(intakeId: string, assu
   const workspace = await loadCalculatorWorkspace(intakeId);
   const { intake, opportunity, load } = workspace;
 
-  if (load.status !== "ready") {
-    throw new Error("The Load Profile must be Ready before HelioCalc can issue a sizing revision.");
+  if (workspace.revisions.some((revision) => revision.status === "reviewed")) {
+    throw new Error("This sizing basis is already approved. Reopening an approved calculation requires a governed engineering amendment.");
   }
-  if (intake.status !== "ready") {
-    throw new Error("The Engineering Intake must be Ready before HelioCalc can issue a sizing revision.");
-  }
+  if (load.status !== "ready") throw new Error("The Load Profile must be Ready before HelioCalc can issue a sizing revision.");
+  if (intake.status !== "ready") throw new Error("The Engineering Intake must be Ready before HelioCalc can issue a sizing revision.");
 
   const inputs: CalculatorInputs = {
     systemType: intake.system_type,
@@ -124,65 +134,66 @@ export async function saveAuthoritativeCalculatorRevision(intakeId: string, assu
 
   const authoritative = await runPreliminarySizing(inputs);
   const blocking = authoritative.result.validations.filter((item) => item.severity === "error");
-  if (blocking.length) {
-    throw new Error(blocking.map((item) => item.title).join(" · "));
-  }
+  if (blocking.length) throw new Error(blocking.map((item) => item.title).join(" · "));
 
-  const { data: latest, error: latestError } = await client
-    .from("engineering_calculations")
-    .select("revision")
-    .eq("engineering_intake_id", intake.id)
-    .order("revision", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (latestError) throw new Error(latestError.message);
-
-  const revision = Number(latest?.revision ?? 0) + 1;
+  const revision = Number(workspace.revisions[0]?.revision ?? 0) + 1;
   const calculationReference = `${opportunity.reference}-CAL-${String(revision).padStart(2, "0")}`;
-  const inputSnapshot = {
-    ...inputs,
-    loadProfileId: load.id,
-    designObjective: intake.design_objective,
-    source: "governed_load_profile",
-    authority: "heliocalc_python",
-  };
+  const inputSnapshot = { ...inputs, loadProfileId: load.id, designObjective: intake.design_objective, source: "governed_load_profile", authority: "heliocalc_python" };
 
   const { data: saved, error: saveError } = await client
     .from("engineering_calculations")
-    .insert({
-      organisation_id: organisationId,
-      engineering_intake_id: intake.id,
-      calculation_reference: calculationReference,
-      revision,
-      system_type: intake.system_type,
-      status: "draft",
-      engine_version: authoritative.engineVersion,
-      input_snapshot: inputSnapshot,
-      result_snapshot: authoritative.result,
-      validation_snapshot: authoritative.result.validations,
-      created_by: userId,
-    })
+    .insert({ organisation_id: organisationId, engineering_intake_id: intake.id, calculation_reference: calculationReference, revision, system_type: intake.system_type, status: "draft", engine_version: authoritative.engineVersion, input_snapshot: inputSnapshot, result_snapshot: authoritative.result, validation_snapshot: authoritative.result.validations, created_by: userId })
     .select("id,calculation_reference,revision,engine_version")
     .single();
 
   if (saveError || !saved) throw new Error(saveError?.message ?? "Authoritative calculation revision could not be saved.");
 
-  const { error: auditError } = await client.from("activity_logs").insert({
-    organisation_id: organisationId,
-    actor_id: userId,
-    event_type: "engineering.calculation.authoritative_saved",
-    description: `${calculationReference} recomputed by ${authoritative.engineVersion} and stored as an immutable preliminary sizing revision for ${opportunity.reference}.`,
-  });
+  const { error: auditError } = await client.from("activity_logs").insert({ organisation_id: organisationId, actor_id: userId, event_type: "engineering.calculation.authoritative_saved", description: `${calculationReference} recomputed by ${authoritative.engineVersion} and stored as an immutable preliminary sizing revision for ${opportunity.reference}.` });
   if (auditError) {
     await client.from("engineering_calculations").delete().eq("id", saved.id);
     throw new Error("Calculation was rolled back because its audit event could not be recorded.");
   }
 
-  return {
-    id: saved.id as string,
-    calculationReference: saved.calculation_reference as string,
-    revision: Number(saved.revision),
-    engineVersion: saved.engine_version as string,
-    result: authoritative.result,
-  };
+  return { id: saved.id as string, calculationReference: saved.calculation_reference as string, revision: Number(saved.revision), engineVersion: saved.engine_version as string, result: authoritative.result };
+}
+
+function assertReviewAuthority(canReview: boolean) {
+  if (!canReview) throw new Error("Only an Owner, Admin or Manager can review the Calculator sizing basis.");
+}
+
+export async function approveLatestCalculatorRevision(intakeId: string, calculationId: string, note?: string) {
+  const { client, userId, organisationId, canReview } = await context();
+  assertReviewAuthority(canReview);
+  const workspace = await loadCalculatorWorkspace(intakeId);
+  const latest = workspace.revisions[0];
+  if (!latest || latest.id !== calculationId) throw new Error("Only the latest authoritative calculation revision can be approved.");
+  if (latest.status === "reviewed") return latest;
+  if (workspace.intake.status !== "ready" || workspace.load.status !== "ready") throw new Error("Engineering Intake and Load Profile must both remain Ready at approval time.");
+  const blockers = latest.validation_snapshot.filter((item) => item.severity === "error");
+  if (blockers.length) throw new Error("A calculation with blocking validation findings cannot be approved.");
+  if (String(latest.input_snapshot.authority ?? "") !== "heliocalc_python") throw new Error("Only a Python HelioCalc authoritative revision can be approved.");
+
+  const { error } = await client.from("engineering_calculations").update({ status: "reviewed" }).eq("id", latest.id).eq("status", "draft");
+  if (error) throw new Error(error.message);
+  const suffix = note?.trim() ? ` Review note: ${note.trim()}` : "";
+  const { error: auditError } = await client.from("activity_logs").insert({ organisation_id: organisationId, actor_id: userId, event_type: "engineering.calculation.approved", description: `${latest.calculation_reference} approved as the governed preliminary sizing basis.${suffix}` });
+  if (auditError) {
+    await client.from("engineering_calculations").update({ status: "draft" }).eq("id", latest.id);
+    throw new Error("Approval was rolled back because its audit event could not be recorded.");
+  }
+  return { ...latest, status: "reviewed" as const };
+}
+
+export async function returnLatestCalculatorRevision(intakeId: string, calculationId: string, note: string) {
+  const { client, userId, organisationId, canReview } = await context();
+  assertReviewAuthority(canReview);
+  const reviewNote = note.trim();
+  if (reviewNote.length < 8) throw new Error("A clear review note is required when returning a calculation for revision.");
+  const workspace = await loadCalculatorWorkspace(intakeId);
+  const latest = workspace.revisions[0];
+  if (!latest || latest.id !== calculationId) throw new Error("Only the latest authoritative calculation revision can be returned.");
+  if (latest.status === "reviewed") throw new Error("An approved sizing basis cannot be returned without a governed engineering amendment.");
+  const { error } = await client.from("activity_logs").insert({ organisation_id: organisationId, actor_id: userId, event_type: "engineering.calculation.returned_for_revision", description: `${latest.calculation_reference} returned for a new authoritative HelioCalc revision. Review note: ${reviewNote}` });
+  if (error) throw new Error(error.message);
+  return latest;
 }
