@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { RecordHeader, RecordWorkspace, RecordWorkspaceSection } from "@/components/heliocore/record-workspace";
 
 type BomLine = Record<string, unknown>;

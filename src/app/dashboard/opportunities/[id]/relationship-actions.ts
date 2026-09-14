@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 
 function text(fd: FormData, key: string) {
   return String(fd.get(key) ?? "").trim();

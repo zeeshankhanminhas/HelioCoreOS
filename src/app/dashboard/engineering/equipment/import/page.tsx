@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { BulkImportClient } from "./bulk-import-client";
 import { importCandidate } from "./actions";
 

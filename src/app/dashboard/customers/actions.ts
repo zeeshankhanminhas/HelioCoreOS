@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 
 const customerKinds = ["individual", "organisation"] as const;
 const customerStatuses = ["prospect", "active", "inactive", "blocked", "archived"] as const;

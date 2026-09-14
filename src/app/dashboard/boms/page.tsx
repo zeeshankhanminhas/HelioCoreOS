@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { BomRegister, type BomRegisterRow } from "./bom-register";
 
 function relationName(value: unknown, fallback: string) {
