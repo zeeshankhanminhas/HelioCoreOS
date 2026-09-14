@@ -1,5 +1,3 @@
-"use client";
-
 import { createClient as createNeonClient } from "@neondatabase/neon-js";
 
 export function createClient() {
