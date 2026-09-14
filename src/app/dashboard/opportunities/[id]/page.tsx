@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { RecordHeader, RecordWorkspace, RecordWorkspaceSection } from "@/components/heliocore/record-workspace";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import type { OpportunityCoreInput } from "@/lib/schemas/opportunity";
 import { updateOpportunity } from "../actions";
 import { OpportunityCoreForm } from "./opportunity-core-form";

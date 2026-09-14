@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 
 const statuses = ["draft", "in_progress", "under_review", "approved", "rejected"] as const;
 type DesignStatus = (typeof statuses)[number];
