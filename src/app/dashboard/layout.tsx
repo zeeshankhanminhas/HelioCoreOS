@@ -1,38 +1,21 @@
 import { redirect } from "next/navigation";
 import { signOut } from "@/app/auth/actions";
-import { createClient } from "@/lib/supabase/server";
+import { auth } from "@/lib/auth/server";
 import { WorkspaceShell } from "./_components/workspace-shell";
 
-type ProfileWithOrganisation = {
-  full_name: string | null;
-  role: string | null;
-  organisations: { name: string } | { name: string }[] | null;
-};
+export const dynamic = "force-dynamic";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: session } = await auth.getSession();
+  const user = session?.user;
 
   if (!user) {
     redirect("/login");
   }
 
-  const { data } = await supabase
-    .from("profiles")
-    .select("full_name, role, organisations(name)")
-    .eq("id", user.id)
-    .single();
-
-  const profile = data as ProfileWithOrganisation | null;
-  const organisation = Array.isArray(profile?.organisations)
-    ? profile.organisations[0]
-    : profile?.organisations;
-
-  const userName = profile?.full_name?.trim() || user.email?.split("@")[0] || "Executive";
-  const userRole = profile?.role?.replaceAll("_", " ") || "executive";
-  const organisationName = organisation?.name || "HelioCoreOS workspace";
+  const userName = user.name?.trim() || user.email?.split("@")[0] || "Executive";
+  const userRole = typeof user.role === "string" && user.role.trim() ? user.role.replaceAll("_", " ") : "member";
+  const organisationName = "HelioCoreOS workspace";
 
   return (
     <WorkspaceShell
