@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { upload } from "@vercel/blob/client";
 import { createImportBatch, processUploadedDatasheet } from "./actions";
 import type { EquipmentImportCategory } from "@/lib/engineering/datasheet-extractor";
 
@@ -34,16 +34,26 @@ export function BulkImportClient() {
 
     startTransition(async () => {
       try {
-        const supabase = createClient();
         const batch = await createImportBatch(files.length);
         for (let index = 0; index < files.length; index += 1) {
           const file = files[index];
           setProgress(`Uploading ${index + 1} of ${files.length} · ${file.name}`);
-          const path = `${batch.organisationId}/${batch.batchId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
-          const { error: uploadError } = await supabase.storage.from("equipment-datasheets").upload(path, file, { contentType: "application/pdf", upsert: false });
-          if (uploadError) throw new Error(`${file.name}: ${uploadError.message}`);
+          const pathname = `${batch.organisationId}/${batch.batchId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
+          const blob = await upload(pathname, file, {
+            access: "public",
+            handleUploadUrl: "/api/equipment-datasheets/upload",
+            contentType: "application/pdf",
+            multipart: true,
+            clientPayload: JSON.stringify({ batchId: batch.batchId }),
+          });
           setProgress(`Extracting ${index + 1} of ${files.length} · ${file.name}`);
-          await processUploadedDatasheet({ batchId: batch.batchId, category, fileName: file.name, storagePath: path, fileSizeBytes: file.size });
+          await processUploadedDatasheet({
+            batchId: batch.batchId,
+            category,
+            fileName: file.name,
+            storagePath: blob.url,
+            fileSizeBytes: file.size,
+          });
         }
         setProgress("Batch ready for review");
         setFiles([]);
