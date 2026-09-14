@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 
 const readinessTypes = ["electricity_bill", "customer_id", "proof_of_address", "ownership_evidence", "meter_photo", "survey_authorisation"] as const;
 const readinessStatuses = ["requested", "uploaded", "accepted", "rejected", "waived"] as const;

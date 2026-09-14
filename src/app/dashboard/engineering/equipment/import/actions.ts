@@ -3,7 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { extractText, getDocumentProxy } from "unpdf";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
+import { createClient as createStorageClient } from "@/lib/supabase/server";
 import { extractEquipmentSpecs, type EquipmentImportCategory } from "@/lib/engineering/datasheet-extractor";
 
 async function context() {
@@ -59,7 +60,8 @@ export async function processUploadedDatasheet(input: {
 
   try {
     await supabase.from("equipment_import_batches").update({ status: "processing", updated_at: new Date().toISOString() }).eq("id", input.batchId);
-    const { data: blob, error: downloadError } = await supabase.storage.from("equipment-datasheets").download(input.storagePath);
+    const storage = await createStorageClient();
+    const { data: blob, error: downloadError } = await storage.storage.from("equipment-datasheets").download(input.storagePath);
     if (downloadError || !blob) throw new Error("Datasheet could not be read from storage.");
     const bytes = new Uint8Array(await blob.arrayBuffer());
     const pdf = await getDocumentProxy(bytes, { maxImageSize: 16_777_216 });

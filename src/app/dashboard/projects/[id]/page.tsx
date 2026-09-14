@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 import { updateProjectControl } from "../actions";
 
 const stages = ["procurement", "installation", "commissioning", "handover", "complete", "on_hold"];

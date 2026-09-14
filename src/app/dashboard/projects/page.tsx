@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/neon/client";
 
 const stages = ["all", "procurement", "installation", "commissioning", "handover", "complete", "on_hold"];
 const risks = ["all", "green", "amber", "red"];
