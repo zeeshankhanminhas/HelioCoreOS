@@ -1,5 +1,3 @@
-"use client";
-
 import { createClient as createNeonClient } from "@neondatabase/neon-js";
 
 export function createClient() {
@@ -9,7 +7,7 @@ export function createClient() {
     throw new Error("Missing NEXT_PUBLIC_NEON_DATA_API_URL.");
   }
 
-  return createNeonClient({
+  const client = createNeonClient({
     auth: {
       url: "/api/auth",
     },
@@ -17,4 +15,18 @@ export function createClient() {
       url: dataApiUrl,
     },
   });
+
+  // Transitional response-shape compatibility for older server actions.
+  // The underlying identity and data runtime is Neon Auth + Neon Data API.
+  const auth = Object.assign(client.auth, {
+    async getUser() {
+      const session = await client.auth.getSession();
+      return {
+        data: { user: session.data?.user ?? null },
+        error: null,
+      };
+    },
+  });
+
+  return Object.assign(client, { auth });
 }
