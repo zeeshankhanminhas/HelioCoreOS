@@ -13,6 +13,51 @@ const date = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", 
 
 type RegisterState = { opportunities: any[]; sites: any[]; intakes: any[]; calculations: any[]; readiness: any[] };
 
+const engineeringAreas = [
+  {
+    label: "Inputs",
+    items: [
+      { label: "Load Profiles", href: "/dashboard/engineering/load-profiles", note: "Demand, operating schedule and consumption basis" },
+      { label: "Equipment Library", href: "/dashboard/engineering/equipment", note: "Modules, inverters, batteries and governed datasheets" },
+    ],
+  },
+  {
+    label: "Analysis",
+    items: [
+      { label: "Calculators", href: "/dashboard/engineering/calculators", note: "System sizing, constraints and saved revisions" },
+      { label: "Performance", href: "/dashboard/engineering/calculators", note: "PVWatts and engineering performance basis" },
+    ],
+  },
+  {
+    label: "Design",
+    items: [
+      { label: "Designs", href: "/dashboard/designs", note: "Detailed engineering package and controlled revisions" },
+      { label: "Drawings / SLD", href: "/dashboard/drawings", note: "Single-line diagrams and engineering drawings" },
+      { label: "BOM", href: "/dashboard/boms", note: "Derived bill of materials for commercial and delivery use" },
+    ],
+  },
+  {
+    label: "Review",
+    items: [
+      { label: "Engineering Review", href: "/dashboard/designs", note: "Governed checks before proposal and contract" },
+    ],
+  },
+];
+
+const engineeringFlow = [
+  { label: "Opportunity + Site", href: "/dashboard/opportunities" },
+  { label: "Readiness", href: "/dashboard/opportunities" },
+  { label: "Load Profile", href: "/dashboard/engineering/load-profiles" },
+  { label: "Calculator", href: "/dashboard/engineering/calculators" },
+  { label: "Equipment", href: "/dashboard/engineering/equipment" },
+  { label: "Design", href: "/dashboard/designs" },
+  { label: "Performance", href: "/dashboard/engineering/calculators" },
+  { label: "SLD + BOM", href: "/dashboard/boms" },
+  { label: "Review", href: "/dashboard/designs" },
+  { label: "Contract", href: "/dashboard/contracts" },
+  { label: "Project", href: "/dashboard/projects", muted: true },
+];
+
 export default function EngineeringPage() {
   const [state, setState] = useState<RegisterState | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,11 +97,20 @@ export default function EngineeringPage() {
 
   return <div className="mx-auto max-w-[1600px] space-y-5" data-testid="engineering-neon-register">
     <section className="app-panel">
-      <div className="app-toolbar flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="app-kicker">Engineering · Neon</p><h1 className="app-title mt-1">Engineering</h1></div><div className="flex flex-wrap gap-2"><Link href="/dashboard/engineering/equipment" className="inline-flex min-h-9 items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold">Equipment</Link><Link href="/dashboard/designs" className="inline-flex min-h-9 items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold">Designs</Link></div></div>
+      <div className="app-toolbar flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="app-kicker">Engineering · Neon</p><h1 className="app-title mt-1">Engineering Workspace</h1></div><div className="flex flex-wrap gap-2"><Link href="/dashboard/engineering/equipment" className="inline-flex min-h-9 items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold">Equipment</Link><Link href="/dashboard/designs" className="inline-flex min-h-9 items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold">Designs</Link><Link href="/dashboard/boms" className="inline-flex min-h-9 items-center border border-[var(--line-strong)] bg-white px-3 text-[11px] font-semibold">BOM</Link></div></div>
       <div className="grid gap-px bg-[var(--line)] sm:grid-cols-4">{[["Eligible Opportunities", model.options.length],["Active", model.intakes.length],["Load ready", model.readyCount],["Calculators", model.calculatorCount]].map(([label,value]) => <div key={String(label)} className="bg-white px-4 py-3"><p className="app-kicker">{label}</p><p className="mt-1 text-lg font-semibold tabular-nums">{value}</p></div>)}</div>
     </section>
 
-    <section className="app-panel overflow-x-auto"><div className="flex min-w-max divide-x divide-[var(--line)] text-[10px] font-semibold uppercase tracking-[0.1em]">{["Opportunity + Site","Readiness","Load Profile","Calculator","Equipment","Design","Performance","SLD + BOM","Review","Contract","Project"].map((item,index) => <div key={item} className={`px-3 py-2.5 ${item === "Project" ? "text-[var(--muted)]" : ""}`}><span className="mr-2 text-[var(--muted)]">{String(index+1).padStart(2,"0")}</span>{item}</div>)}</div></section>
+    <section className="app-panel">
+      <div className="app-toolbar px-4 py-3"><p className="app-kicker">Engineering disciplines</p><p className="mt-1 text-sm font-semibold">Inputs → Analysis → Design → Review</p></div>
+      <div className="grid gap-px bg-[var(--line)] md:grid-cols-2 xl:grid-cols-4">
+        {engineeringAreas.map((area) => <div key={area.label} className="bg-[var(--background)] p-4"><p className="app-kicker">{area.label}</p><div className="mt-3 divide-y divide-[var(--line)] border-y border-[var(--line)]">{area.items.map((item) => <Link key={item.label} href={item.href} className="block py-3 hover:text-[var(--accent-strong)]"><p className="text-sm font-semibold">{item.label}</p><p className="mt-1 text-[11px] leading-4 text-[var(--muted)]">{item.note}</p></Link>)}</div></div>)}
+      </div>
+    </section>
+
+    <section className="app-panel">
+      <div className="hide-scrollbar flex overflow-x-auto divide-x divide-[var(--line)] text-[10px] font-semibold uppercase tracking-[0.1em]">{engineeringFlow.map((item,index) => <Link key={item.label} href={item.href} className={`shrink-0 px-3 py-2.5 hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] ${item.muted ? "text-[var(--text-tertiary)]" : ""}`}><span className="mr-2 text-[var(--muted)]">{String(index+1).padStart(2,"0")}</span>{item.label}</Link>)}</div>
+    </section>
 
     {error ? <div className="border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
     {!state && !error ? <section className="app-panel p-8 text-sm text-[var(--muted)]">Loading engineering data from Neon…</section> : null}
