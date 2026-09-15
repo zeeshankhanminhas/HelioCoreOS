@@ -24,8 +24,25 @@ class HelioCalcTests(unittest.TestCase):
         self.assertGreater(model.pv.total_strings, 0)
         self.assertIsNotNone(model.battery)
         self.assertFalse(any(v.severity == "error" for v in validations))
+
         bom = generate_bom(model)
-        self.assertEqual(bom[0].quantity, model.pv.module_quantity)
+        by_description = {item.description: item for item in bom}
+
+        # Core BOM quantities are authoritative outputs from the compiled design,
+        # not independent free-form material quantities.
+        self.assertEqual(by_description["PV module"].quantity, model.pv.module_quantity)
+        self.assertEqual(by_description["Inverter / PCS"].quantity, model.pv.inverter_quantity)
+        self.assertEqual(by_description["Battery unit"].quantity, model.battery.quantity)
+        self.assertEqual(by_description["PV module"].equipment_id, model.pv.module.equipment_id)
+        self.assertEqual(by_description["Inverter / PCS"].equipment_id, model.pv.inverter.equipment_id)
+
+        # Missing protection selections must remain a governed engineering-review
+        # requirement rather than silently becoming procurement-ready material.
+        review_lines = [item for item in bom if item.status == "engineering_review"]
+        self.assertGreaterEqual(len(review_lines), 2)
+        self.assertTrue(any("DC isolation" in item.description for item in review_lines))
+        self.assertTrue(any("AC isolation" in item.description for item in review_lines))
+
         svg = generate_sld_svg(model)
         self.assertIn("Generated SLD", svg)
         self.assertIn(self.module.model, svg)
