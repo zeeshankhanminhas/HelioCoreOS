@@ -20,6 +20,16 @@ function field(value: unknown, key: string) {
   return item && typeof item === "object" ? (item as Record<string, unknown>)[key] : null;
 }
 
+function bomSource(item: BomLine) {
+  const status = String(item.status ?? "selected");
+  const category = String(item.category ?? "").toLowerCase();
+  if (status === "engineering_review") return "Design rule / review";
+  if (item.equipmentId || item.equipment_id) return "Calculation + datasheet";
+  if (category === "cable") return "Design route";
+  if (category === "protection") return "Protection selection";
+  return "Generated design";
+}
+
 const titleCase = (value: string) => value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 
 export default async function DesignPage({ params }: { params: Promise<{ id: string }> }) {
@@ -41,7 +51,14 @@ export default async function DesignPage({ params }: { params: Promise<{ id: str
     ? design.bom_snapshot.filter((line: unknown): line is BomLine => Boolean(line) && typeof line === "object" && !Array.isArray(line))
     : [];
   const performance = design.performance_snapshot && typeof design.performance_snapshot === "object" ? design.performance_snapshot as Record<string, unknown> : {};
-  const procurementState = design.status === "approved" && bom.length ? "Ready for procurement" : design.status === "approved" ? "BOM incomplete" : "Design approval required";
+  const reviewLines = bom.filter((item) => String(item.status ?? "selected") === "engineering_review");
+  const procurementState = design.status !== "approved"
+    ? "Design approval required"
+    : !bom.length
+      ? "BOM incomplete"
+      : reviewLines.length
+        ? "Engineering review required"
+        : "Ready for procurement";
 
   return <RecordWorkspace>
     <RecordHeader
@@ -78,8 +95,15 @@ export default async function DesignPage({ params }: { params: Promise<{ id: str
       </div>
     </RecordWorkspaceSection>
 
-    <RecordWorkspaceSection eyebrow="Materials" title="BOM" description={procurementState}>
-      {bom.length ? <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-collapse text-left text-sm"><thead className="border-b border-[var(--line)] bg-black/[0.015] text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]"><tr><th className="px-5 py-3">Item</th><th className="px-5 py-3">Category</th><th className="px-5 py-3">Quantity</th><th className="px-5 py-3">Status / note</th></tr></thead><tbody>{bom.map((item: BomLine, index: number) => <tr key={index} className="border-b border-[var(--line)]"><td className="px-5 py-4 font-medium">{String(item.description ?? item.name ?? item.item ?? `BOM line ${index + 1}`)}</td><td className="px-5 py-4 text-[var(--muted)]">{String(item.category ?? item.type ?? "—")}</td><td className="px-5 py-4 tabular-nums">{String(item.quantity ?? item.qty ?? "—")}</td><td className="px-5 py-4 text-[var(--muted)]">{String(item.status ?? item.note ?? "—")}</td></tr>)}</tbody></table></div> : <p className="p-6 text-sm text-[var(--muted)]">No BOM generated.</p>}
+    <RecordWorkspaceSection eyebrow="Materials" title="Generated BOM" description={procurementState}>
+      <div className="border-b border-[var(--line)] bg-[var(--surface-subtle)] px-5 py-4 text-xs leading-5 text-[var(--muted)]">
+        <span className="font-semibold text-[var(--foreground)]">Governed output:</span> HelioCalc generates this BOM from the same compiled electrical design model used for calculations and the SLD. Equipment quantities come from engineering logic and approved datasheets; cable quantities come from governed design routes; unresolved rule-based items remain <span className="font-semibold text-[var(--foreground)]">Engineering review</span> and block procurement release.
+      </div>
+      {reviewLines.length ? <div className="border-b border-amber-300 bg-amber-50 px-5 py-4 text-sm text-amber-900"><span className="font-semibold">Procurement blocked:</span> {reviewLines.length} BOM {reviewLines.length === 1 ? "line requires" : "lines require"} engineering resolution before material release.</div> : null}
+      {bom.length ? <div className="overflow-x-auto"><table className="w-full min-w-[920px] border-collapse text-left text-sm"><thead className="border-b border-[var(--line)] bg-black/[0.015] text-[10px] uppercase tracking-[0.12em] text-[var(--muted)]"><tr><th className="px-5 py-3">Item</th><th className="px-5 py-3">Category</th><th className="px-5 py-3">Quantity</th><th className="px-5 py-3">Source / basis</th><th className="px-5 py-3">Engineering state</th></tr></thead><tbody>{bom.map((item: BomLine, index: number) => {
+        const status = String(item.status ?? "selected");
+        return <tr key={index} className="border-b border-[var(--line)]"><td className="px-5 py-4"><p className="font-medium">{String(item.description ?? item.name ?? item.item ?? `BOM line ${index + 1}`)}</p>{item.manufacturer || item.model ? <p className="mt-1 text-xs text-[var(--muted)]">{[item.manufacturer, item.model].filter(Boolean).map(String).join(" · ")}</p> : null}</td><td className="px-5 py-4 text-[var(--muted)]">{String(item.category ?? item.type ?? "—")}</td><td className="px-5 py-4 tabular-nums">{String(item.quantity ?? item.qty ?? "—")} {String(item.unit ?? "")}</td><td className="px-5 py-4 text-[var(--muted)]">{bomSource(item)}</td><td className={`px-5 py-4 text-xs font-semibold ${status === "engineering_review" ? "text-amber-800" : "text-[var(--foreground)]"}`}>{status === "engineering_review" ? "Engineering review" : "Generated / selected"}</td></tr>;
+      })}</tbody></table></div> : <p className="p-6 text-sm text-[var(--muted)]">No generated BOM is stored for this design revision yet. Compile the detailed engineering package before procurement.</p>}
     </RecordWorkspaceSection>
   </RecordWorkspace>;
 }
