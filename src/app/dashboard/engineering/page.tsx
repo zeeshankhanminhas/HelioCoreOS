@@ -119,9 +119,9 @@ export default function EngineeringPage() {
     <section className="app-panel">
       <div className="app-toolbar flex items-center justify-between gap-4 px-4"><div><p className="app-kicker">Work queue</p><p className="mt-0.5 text-sm font-semibold">Active engineering</p></div><span className="text-[10px] text-[var(--muted)]">{model.intakes.length} records</span></div>
       {model.intakes.length ? <div className="divide-y divide-[var(--line)]">{model.intakes.map((intake) => {
-        const opportunity = model.opportunityMap.get(intake.opportunity_id); const calculation = model.latestCalculation.get(intake.id); const destination = intake.status === "ready" ? `/dashboard/engineering/calculators/${intake.id}` : intake.load_profile_id ? `/dashboard/engineering/load-profiles/${intake.load_profile_id}` : null;
+        const opportunity = model.opportunityMap.get(intake.opportunity_id); const calculation = model.latestCalculation.get(intake.id); const destination = `/dashboard/engineering/${intake.id}`;
         const row = <div className="grid gap-2 px-4 py-3 text-xs md:grid-cols-[minmax(220px,1.5fr)_130px_minmax(180px,1fr)_160px_110px]"><div><p className="font-semibold">{opportunity?.reference ?? "Engineering intake"}</p><p className="text-[10px] text-[var(--muted)]">{opportunity?.title ?? intake.id}</p></div><span>{systemTypeLabels[intake.system_type as SystemType] ?? titleCase(intake.system_type)}</span><span className="text-[var(--muted)]">{titleCase(intake.design_objective)}</span><span className="font-semibold">{intake.status !== "ready" ? "Load profile" : calculation ? `Calculator R${calculation.revision}` : "Calculator"}</span><span className="text-right text-[var(--muted)]">{date.format(new Date(intake.created_at))}</span></div>;
-        return destination ? <Link key={intake.id} href={destination} className="block hover:bg-[var(--surface-subtle)]">{row}</Link> : <div key={intake.id}>{row}</div>;
+        return <Link key={intake.id} href={destination} className="block hover:bg-[var(--surface-subtle)]">{row}</Link>;
       })}</div> : <div className="px-4 py-10 text-sm text-[var(--muted)]">No active engineering.</div>}
     </section>
   </div>;
