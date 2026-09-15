@@ -266,13 +266,15 @@ export async function queueDiscoveredDatasheet(fd: FormData) {
     if (!sameOfficialDomain(finalUrl.hostname, String(source.source_host))) throw new Error("Datasheet redirected outside the approved manufacturer domain.");
     const length = Number(response.headers.get("content-length") ?? 0);
     if (length > 20 * 1024 * 1024) throw new Error("Datasheet exceeds the 20 MB import limit.");
-    const bytes = new Uint8Array(await response.arrayBuffer());
+    const pdfArrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(pdfArrayBuffer);
     if (bytes.byteLength > 20 * 1024 * 1024) throw new Error("Datasheet exceeds the 20 MB import limit.");
     if (String.fromCharCode(...bytes.slice(0, 4)) !== "%PDF") throw new Error("The discovered document is not a valid PDF.");
 
     const batch = await createImportBatch(1);
     const pathname = `${batch.organisationId}/${batch.batchId}/${crypto.randomUUID()}-${safeFileName(discovery.file_name)}`;
-    const blob = await put(pathname, bytes, { access: "public", contentType: "application/pdf", addRandomSuffix: false });
+    const uploadBody = new Blob([pdfArrayBuffer], { type: "application/pdf" });
+    const blob = await put(pathname, uploadBody, { access: "public", contentType: "application/pdf", addRandomSuffix: false });
     await processUploadedDatasheet({ batchId: batch.batchId, category: chosenCategory, fileName: discovery.file_name, storagePath: blob.url, fileSizeBytes: bytes.byteLength });
     await client.from("equipment_datasheet_discoveries").update({ status: "queued", category: chosenCategory, processed_at: new Date().toISOString(), note: "Copied to governed Blob storage and sent to extraction review.", updated_at: new Date().toISOString() }).eq("id", discovery.id);
   } catch (error) {
