@@ -1,4 +1,11 @@
+import Link from "next/link";
 import type { ReactNode } from "react";
+
+export type RecordWorkspaceNavItem = {
+  label: string;
+  href: string;
+  muted?: boolean;
+};
 
 export function RecordHeader({
   eyebrow,
@@ -23,6 +30,24 @@ export function RecordHeader({
   );
 }
 
+export function RecordWorkspaceNav({ items, ariaLabel }: { items: RecordWorkspaceNavItem[]; ariaLabel: string }) {
+  return (
+    <nav className="mt-6 border-y border-[var(--line)] bg-[var(--background)]" aria-label={ariaLabel}>
+      <div className="hide-scrollbar flex overflow-x-auto">
+        {items.map((item, index) => (
+          <Link
+            key={`${item.href}-${item.label}`}
+            href={item.href}
+            className={`shrink-0 border-r border-[var(--line)] px-4 py-3 text-xs font-semibold transition-colors hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] ${index === 0 ? "text-[var(--accent-strong)]" : item.muted ? "text-[var(--text-tertiary)]" : "text-[var(--muted)]"}`}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
 export function RecordWorkspace({ children }: { children: ReactNode }) {
   return <div className="mx-auto max-w-[1500px]">{children}</div>;
 }
@@ -34,6 +59,7 @@ export function RecordWorkspaceSection({
   action,
   children,
   className = "mt-7",
+  id,
 }: {
   eyebrow: string;
   title: string;
@@ -41,9 +67,10 @@ export function RecordWorkspaceSection({
   action?: ReactNode;
   children: ReactNode;
   className?: string;
+  id?: string;
 }) {
   return (
-    <section className={`${className} border border-[var(--line)]`}>
+    <section id={id} className={`${className} scroll-mt-28 border border-[var(--line)]`}>
       <div className="flex flex-col gap-4 border-b border-[var(--line)] p-5 md:flex-row md:items-end md:justify-between">
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[var(--muted)]">{eyebrow}</p>
