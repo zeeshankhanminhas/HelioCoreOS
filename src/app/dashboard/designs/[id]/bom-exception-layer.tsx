@@ -128,7 +128,7 @@ export function BomExceptionLayer({
       </div>
 
       <div className="border-t border-[var(--line)]">
-        <div className="border-b border-[var(--line)] px-5 py-4"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Audit trail</p><p className="mt-1 text-sm text-[var(--muted)]">Append-only events record creation and every review decision.</p></div>
+        <div className="border-b border-[var(--line)] px-5 py-4"><p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)]">Audit trail</p><p className="mt-1 text-sm text-[var(--muted)]">Append-only events preserve the exception request and every review decision without rewriting the generated BOM.</p></div>
         {events.length ? <div className="divide-y divide-[var(--line)]">{events.map((event) => <div key={event.id} className="grid gap-2 px-5 py-4 text-sm md:grid-cols-[180px_130px_1fr]"><span className="text-xs tabular-nums text-[var(--muted)]">{date.format(new Date(event.created_at))}</span><span className="text-xs font-semibold">{titleCase(event.event_type)}</span><span className="text-xs text-[var(--muted)]">Exception {event.exception_id.slice(0, 8)} · {event.payload?.reason ? String(event.payload.reason) : event.payload?.requestedQuantity ? `Requested quantity ${String(event.payload.requestedQuantity)}` : "Governed BOM event"}</span></div>)}</div> : <p className="p-5 text-sm text-[var(--muted)]">No audit events yet.</p>}
       </div>
     </section>
