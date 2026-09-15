@@ -1,16 +1,30 @@
 @import "tailwindcss";
 
 :root {
-  --canvas: #f3f4f6;
-  --background: #ffffff;
-  --surface-subtle: #f8f9fb;
-  --foreground: #17191d;
-  --muted: #69707d;
-  --line: #dfe3e8;
-  --line-strong: #c8ced6;
-  --accent: #d97706;
-  --sidebar: #111318;
-  --sidebar-muted: #8d96a3;
+  --canvas: #f4f2ed;
+  --background: #fffdfa;
+  --surface-subtle: #f7f4ee;
+  --surface-selected: #fff4df;
+  --foreground: #1d1c19;
+  --muted: #6f6b63;
+  --text-secondary: #6f6b63;
+  --text-tertiary: #9a9489;
+  --line: #dfdbd2;
+  --line-strong: #c9c2b7;
+  --accent: #b96808;
+  --accent-text: #8d4f08;
+  --accent-soft: #fff2d8;
+  --accent-soft-border: #e2b56f;
+  --sidebar: #f8f5ef;
+  --sidebar-text: #5c5851;
+  --sidebar-muted: #827d74;
+  --sidebar-line: #ded9cf;
+  --sidebar-hover: #f0ece4;
+  --sidebar-active: #fff0d4;
+  --status-success: #2f6b42;
+  --status-warning: #9a5b08;
+  --status-danger: #a33a32;
+  --status-info: #35617a;
 }
 
 * {
@@ -56,8 +70,17 @@ a:focus:not(:focus-visible) {
 }
 
 ::selection {
-  background: #fde7c2;
+  background: var(--accent-soft);
   color: var(--foreground);
+}
+
+.shell-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.shell-scroll::-webkit-scrollbar {
+  display: none;
 }
 
 .app-panel {
@@ -72,10 +95,10 @@ a:focus:not(:focus-visible) {
 }
 
 .app-kicker {
-  color: var(--muted);
-  font-size: 10px;
+  color: var(--text-secondary);
+  font-size: 11px;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
 }
 
