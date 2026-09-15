@@ -6,6 +6,14 @@ from .models import BomItem, ElectricalDesignModel
 
 
 def generate_bom(model: ElectricalDesignModel) -> list[BomItem]:
+    """Generate the material baseline exclusively from the compiled design model.
+
+    HelioCoreOS does not accept an independently authored free-form BOM here. Core
+    equipment quantities come from calculated PV/BESS sizing, cable quantities come
+    from governed design runs, and protection devices come from engineering
+    selections. Missing protection remains explicitly in engineering review so an
+    incomplete design cannot masquerade as procurement-ready material.
+    """
     items = [
         BomItem(category="PV", description="PV module", manufacturer=model.pv.module.manufacturer, model=model.pv.module.model, quantity=model.pv.module_quantity, unit="ea", equipment_id=model.pv.module.equipment_id),
         BomItem(category="Power conversion", description="Inverter / PCS", manufacturer=model.pv.inverter.manufacturer, model=model.pv.inverter.model, quantity=model.pv.inverter_quantity, unit="ea", equipment_id=model.pv.inverter.equipment_id),
