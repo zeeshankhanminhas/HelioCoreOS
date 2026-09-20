@@ -31,10 +31,16 @@ export default async function Home() {
           <p className="mt-7 max-w-2xl text-lg leading-8 text-[var(--muted)]">
             Commercial, engineering, procurement, installation, quality, commissioning and handover—structured as one connected operating model.
           </p>
-          <div className="mt-9">
+          <div className="mt-9 flex flex-wrap gap-3">
+            <Link
+              href="/showcase"
+              className="inline-flex min-h-11 items-center border border-[var(--foreground)] bg-[var(--foreground)] px-6 text-sm font-semibold text-white transition hover:opacity-90"
+            >
+              View workflow showcase
+            </Link>
             <Link
               href={authenticated ? "/dashboard" : "/login"}
-              className="inline-flex min-h-11 items-center border border-[var(--foreground)] bg-[var(--foreground)] px-6 text-sm font-semibold text-white transition hover:opacity-90"
+              className="inline-flex min-h-11 items-center border border-[var(--foreground)] px-6 text-sm font-semibold transition hover:bg-[var(--foreground)] hover:text-white"
             >
               {authenticated ? "Continue to workspace" : "Sign in or create workspace"}
             </Link>
