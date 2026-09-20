@@ -190,7 +190,7 @@ export default function ShowcasePage() {
               ))}
             </ol>
 
-            <div className="mt-4 grid gap-3 xl:grid-cols-[258px_minmax(560px,1fr)_298px]">
+            <div className="mt-4 grid gap-3 2xl:grid-cols-[258px_minmax(560px,1fr)_298px]">
               <aside className="border border-[var(--line)] bg-[var(--background)]">
                 <SectionHead action="Edit">Design basis &amp; constraints</SectionHead>
                 <div className="space-y-4 p-3 text-[10px]">
