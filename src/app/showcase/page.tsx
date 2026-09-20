@@ -166,12 +166,12 @@ export default function ShowcasePage() {
               <legend className="app-kicker mb-2">Review checklist</legend>
               {["Survey geometry reconciled", "Module zones verified", "Access paths retained", "Exceptions documented"].map((item, index) => (
                 <label key={item} className="flex min-h-11 cursor-pointer items-center gap-3 border-b border-[var(--line)] text-sm">
-                  <input type="checkbox" defaultChecked={index < 3} className="h-4 w-4 accent-[var(--accent)]" />
+                  <input type="checkbox" disabled defaultChecked={index < 3} className="h-4 w-4 accent-[var(--accent)]" />
                   <span>{item}</span>
                 </label>
               ))}
             </fieldset>
-            <button type="button" className="mt-5 min-h-11 w-full bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">Submit layout for review</button>
+            <button type="button" disabled title="Read-only showcase" className="mt-5 cursor-not-allowed opacity-55 min-h-11 w-full bg-[var(--foreground)] px-4 text-sm font-semibold text-[var(--background)] hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent)]">Submit layout for review</button>
             <p className="mt-3 text-xs leading-5 text-[var(--muted)]">Submission records revision R03 and notifies the assigned design authority.</p>
           </div>
         </aside>
