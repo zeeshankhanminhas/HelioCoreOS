@@ -1,4 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
+import { hcTableFeatures } from "@/components/heliocore/hc-data-table";
 import type { Project } from "@/lib/schemas/project";
 import { HCStatusBadge, type HCTone } from "@/components/heliocore/hc-status-badge";
 
@@ -6,7 +7,7 @@ function toneForStatus(status: Project["status"]): HCTone {
   return status === "On Track" || status === "Completed" ? "green" : status === "At Risk" ? "amber" : "red";
 }
 
-export const projectColumns: ColumnDef<Project>[] = [
+export const projectColumns: ColumnDef<typeof hcTableFeatures, Project>[] = [
   {
     accessorKey: "name",
     header: "Project",
