@@ -14,7 +14,7 @@ export const projectSchema = z.object({
 });
 
 export const createProjectSchema = projectSchema.omit({ id: true }).extend({
-  capacityMwp: z.coerce.number().positive("Capacity must be greater than zero"),
+  capacityMwp: z.number().positive("Capacity must be greater than zero"),
   location: z.string().min(2, "Location is required"),
 });
 
