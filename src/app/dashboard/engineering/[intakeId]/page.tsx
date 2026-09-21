@@ -87,7 +87,17 @@ export default async function Engineering360Page({ params }: Props) {
 
       <main id="active-work" className="min-w-0 space-y-4">
         <section className="app-panel overflow-hidden"><div className="app-toolbar flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="app-kicker">Active work product</p><h2 className="mt-1 text-base font-semibold">System design · {latestDesign?.design_reference ?? "Awaiting first revision"}</h2></div><div className="flex flex-wrap items-center gap-2"><ApprovalState label={latestDesign ? titleCase(latestDesign.status) : "Not started"} approved={designApproved} />{latestDesign ? <Link href={`/dashboard/designs/${latestDesign.id}`} className={`${button} border-[var(--line-strong)] bg-[var(--background)]`}>Open source record <ArrowRight aria-hidden="true" size={13} /></Link> : <Link href="/dashboard/designs" className={`${button} border-[var(--line-strong)] bg-[var(--background)]`}>Design register</Link>}</div></div>
-          <div className="workspace-grid relative min-h-[330px] overflow-hidden border-b border-[var(--line)] bg-[#eeece4] p-5 sm:p-8">{latestDesign ? <div className="mx-auto flex min-h-[270px] max-w-3xl items-center justify-center"><div className="relative w-full rotate-[-2deg] border border-[#9c9a8f] bg-[#c8c5b9] p-5 shadow-[0_8px_20px_rgba(38,37,33,0.12)]"><div className="grid grid-cols-6 gap-1.5 border border-[#777a72] bg-[#8f9289] p-3 sm:grid-cols-10">{Array.from({ length: Math.min(Math.max(Number(latestDesign.module_quantity ?? 30), 18), 50) }).map((_, index) => <span key={index} className="aspect-[1.6/1] border border-[#758aa0] bg-[#273f55] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" />)}</div><div className="absolute -bottom-3 right-5 border border-[var(--line-strong)] bg-[var(--background)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em]">Schematic array preview</div></div></div> : <div className="flex min-h-[270px] flex-col items-center justify-center text-center"><Layers3 aria-hidden="true" size={30} className="text-[var(--text-tertiary)]" /><p className="mt-3 text-sm font-semibold">No controlled design model</p><p className="mt-1 max-w-sm text-xs leading-5 text-[var(--text-secondary)]">A schematic preview appears only after a system design revision is stored. No CAD or live model integration is implied.</p></div>}<p className="absolute bottom-3 left-4 max-w-[70%] text-[9px] leading-4 text-[var(--text-secondary)]">Technical representation derived from stored design quantities. It is not a CAD, GIS, or survey model.</p></div>
+          <div className="border-b border-[var(--line)] bg-[#e8e4d8] p-2 sm:p-3">
+            {latestDesign ? (
+              <SiteLayoutPreview moduleQuantity={Number(latestDesign.module_quantity ?? 30)} />
+            ) : (
+              <div className="flex min-h-[360px] flex-col items-center justify-center bg-[var(--surface-muted)] text-center">
+                <Layers3 aria-hidden="true" size={30} className="text-[var(--text-tertiary)]" />
+                <p className="mt-3 text-sm font-semibold">No controlled layout revision</p>
+                <p className="mt-1 max-w-sm text-xs leading-5 text-[var(--text-secondary)]">A layout study appears after a system design revision is stored. No CAD, GIS, or live-model integration is implied.</p>
+              </div>
+            )}
+          </div>
           <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4"><EngineeringMetric label="PV array" value={latestDesign?.array_capacity_kwp == null ? "—" : number(latestDesign.array_capacity_kwp, 2)} unit="kWp" /><EngineeringMetric label="Inverter" value={latestDesign?.inverter_capacity_kw == null ? "—" : number(latestDesign.inverter_capacity_kw, 2)} unit="kW" /><EngineeringMetric label="BESS" value={latestDesign?.battery_capacity_kwh == null ? "—" : number(latestDesign.battery_capacity_kwh)} unit="kWh" /><EngineeringMetric label="DC/AC ratio" value={latestDesign?.array_capacity_kwp && latestDesign?.inverter_capacity_kw ? number(Number(latestDesign.array_capacity_kwp) / Number(latestDesign.inverter_capacity_kw), 2) : "—"} detail="Derived from stored capacities" /></div>
         </section>
         <section className="app-panel overflow-hidden"><PanelHeading eyebrow="Controlled outputs" title="Extraction & artefacts" /><div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4"><Artefact icon={<Layers3 size={15} />} label="Calculation" value={latestCalculation ? `${latestCalculation.calculation_reference} · R${latestCalculation.revision}` : "Not issued"} state={calculatorApproved ? "Reviewed" : "Action required"} href={`/dashboard/engineering/calculators/${intakeId}`} /><Artefact icon={<FileText size={15} />} label="Single-line diagram" value={sldReady ? "Generated from design" : "Not generated"} state={sldReady ? "Controlled" : "Blocked"} href={latestDesign ? `/dashboard/designs/${latestDesign.id}` : "/dashboard/designs"} /><Artefact icon={<Box size={15} />} label="Bill of materials" value={`${bom.length} generated lines`} state={bomReady ? "Ready" : bomReview.length ? `${bomReview.length} review lines` : "Incomplete"} href={latestDesign ? `/dashboard/designs/${latestDesign.id}#bom` : "/dashboard/boms"} /><Artefact icon={<FileClock size={15} />} label="Performance" value={performanceReady ? `${number(performance.annualEnergyKwh ?? performance.annual_energy_kwh, 0)} kWh/year` : "Not generated"} state={performanceReady ? "Stored snapshot" : "Pending"} href={latestDesign ? `/dashboard/designs/${latestDesign.id}` : "/dashboard/designs"} /></div></section>
@@ -101,6 +111,52 @@ export default async function Engineering360Page({ params }: Props) {
 
     <section id="dependencies" className="app-panel mt-4 overflow-hidden"><PanelHeading eyebrow="Downstream dependencies" title="Impact of this engineering decision" /><div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">{[["Electrical design", sldReady ? "SLD available" : "Awaiting controlled SLD", sldReady], ["Performance model", performanceReady ? "Stored design snapshot" : "Awaiting performance output", performanceReady], ["BOM & procurement", bomReady ? `${bom.length} lines ready` : "BOM release blocked", bomReady], ["Commercial proposal", packageApproved ? "Engineering basis available" : "Engineering gate incomplete", packageApproved], ["Construction release", packageApproved ? "Eligible for governed release" : "IFC release unavailable", packageApproved]].map(([label, value, ready]) => <div key={String(label)} className="bg-[var(--background)] p-4"><div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold">{String(label)}</p><LifecycleStatus label={ready ? "Ready" : "Dependent"} tone={ready ? "success" : "neutral"} /></div><p className="mt-2 text-[11px] leading-5 text-[var(--text-secondary)]">{String(value)}</p></div>)}</div></section>
   </div>;
+}
+
+
+function SiteLayoutPreview({ moduleQuantity }: { moduleQuantity: number }) {
+  const rows = Math.min(Math.max(Math.round(moduleQuantity / 28), 9), 15);
+  const tableRows = Array.from({ length: rows });
+  return (
+    <div className="relative min-h-[390px] overflow-hidden border border-[#b6b0a3] bg-[#b8b8a7]">
+      <div className="absolute inset-0 bg-[linear-gradient(145deg,#99a080_0%,#b8b39c_36%,#8f927a_36%,#aeb19a_62%,#8c8d73_62%,#a8a98f_100%)]" />
+      <div className="absolute inset-[7%_8%_8%_10%] -rotate-[1deg] border-2 border-[#f0a11a] bg-[#6f7d63]/55 shadow-[0_10px_24px_rgba(25,25,20,0.18)]">
+        <div className="absolute left-[4%] top-[6%] h-[88%] w-[8%] bg-[#cbc3aa]/70" />
+        <div className="absolute right-[5%] top-[9%] h-[82%] w-[7%] bg-[#c9c1aa]/65" />
+        <div className="absolute bottom-[10%] left-[18%] right-[16%] h-[7%] bg-[#d4ccb6]/60" />
+        <div className="absolute inset-[5%_12%_13%_14%] grid content-center gap-[5px]">
+          {tableRows.map((_, row) => (
+            <div key={row} className="grid grid-cols-12 gap-[4px]">
+              {Array.from({ length: 12 }).map((__, column) => (
+                <span key={column} className="block h-[11px] border border-[#58718b] bg-[#213e57] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" />
+              ))}
+            </div>
+          ))}
+        </div>
+        <span className="absolute left-[7%] top-[13%] h-4 w-4 border-2 border-white bg-[#3e7f63] shadow-sm" title="Inverter / skid" />
+        <span className="absolute bottom-[14%] right-[8%] h-4 w-6 border-2 border-white bg-[#c65e43] shadow-sm" title="BESS container" />
+      </div>
+
+      <div className="absolute left-3 top-3 flex flex-col overflow-hidden border border-white/45 bg-[#1f2524]/85 text-white shadow-sm">
+        {["↖", "＋", "−", "⌖"].map((item) => <button key={item} type="button" className="flex h-8 w-8 items-center justify-center border-b border-white/15 text-xs last:border-b-0" aria-label="Layout view control">{item}</button>)}
+      </div>
+
+      <div className="absolute right-3 top-3 overflow-hidden border border-white/45 bg-[#1f2524]/88 text-[9px] font-semibold text-white">
+        {["2D", "3D", "Top", "North"].map((view, index) => <span key={view} className={`block min-w-11 border-b border-white/15 px-2 py-2 text-center last:border-b-0 ${index === 1 ? "bg-[var(--accent)]" : ""}`}>{view}</span>)}
+      </div>
+
+      <div className="absolute bottom-3 left-3 border border-white/45 bg-[#1f2524]/86 px-3 py-2 text-[9px] leading-5 text-white shadow-sm">
+        <div><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#4f8fd8]" />PV modules</div>
+        <div><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#55a574]" />Inverter / skid</div>
+        <div><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#dd7054]" />BESS container</div>
+        <div><span className="mr-2 inline-block h-2 w-2 rounded-full bg-[#f0a11a]" />Site boundary</div>
+      </div>
+
+      <div className="absolute bottom-3 right-3 border border-white/55 bg-white/90 px-3 py-2 text-[9px] font-semibold text-[#272721] shadow-sm">
+        Controlled layout study · schematic only
+      </div>
+    </div>
+  );
 }
 
 function PanelHeading({ eyebrow, title }: { eyebrow: string; title: string }) { return <div className="app-toolbar px-4 py-3"><p className="app-kicker">{eyebrow}</p><h2 className="mt-1 text-sm font-semibold">{title}</h2></div>; }
