@@ -73,7 +73,11 @@ export default function CustomerPage() {
       setLoading(false);
     }
 
-    void load();
+    void load().catch(() => {
+      if (cancelled) return;
+      setUnavailable(true);
+      setLoading(false);
+    });
     return () => {
       cancelled = true;
     };

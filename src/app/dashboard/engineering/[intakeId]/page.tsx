@@ -1,220 +1,108 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import {
-  RecordHeader,
-  RecordWorkspace,
-  RecordWorkspaceNav,
-  RecordWorkspaceSection,
-} from "@/components/heliocore/record-workspace";
+import { ArrowRight, Box, FileClock, FileText, Layers3 } from "lucide-react";
+import { ApprovalState, BlockerPanel, EngineeringCheck, EngineeringMetric, LifecycleStatus, NextAction } from "@/components/heliocore/operational-state";
 import { createClient } from "@/lib/neon/client";
 import { systemTypeLabels } from "@/lib/engineering/design-rules";
 import type { SystemType } from "@/lib/engineering/types";
 
 type Props = { params: Promise<{ intakeId: string }> };
 type JsonRecord = Record<string, unknown>;
+type StageState = "completed" | "current" | "available" | "blocked" | "not-started";
+const button = "inline-flex min-h-10 items-center justify-center gap-2 border px-3 text-[11px] font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)] focus-visible:ring-offset-2";
 
-function relation(value: unknown) {
-  if (Array.isArray(value)) return relation(value[0]);
-  return value && typeof value === "object" ? (value as JsonRecord) : null;
-}
-
-function titleCase(value: unknown) {
-  return String(value ?? "")
-    .replaceAll("_", " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function number(value: unknown, digits = 1) {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed.toFixed(digits) : "—";
-}
-
-function object(value: unknown): JsonRecord {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : {};
-}
-
-function list(value: unknown): JsonRecord[] {
-  return Array.isArray(value)
-    ? value.filter((item): item is JsonRecord => Boolean(item) && typeof item === "object" && !Array.isArray(item))
-    : [];
-}
+function relation(value: unknown) { if (Array.isArray(value)) return relation(value[0]); return value && typeof value === "object" ? value as JsonRecord : null; }
+function titleCase(value: unknown) { return String(value ?? "").replaceAll("_", " ").replace(/\b\w/g, (character) => character.toUpperCase()); }
+function number(value: unknown, digits = 1) { const parsed = Number(value); return Number.isFinite(parsed) ? parsed.toFixed(digits) : "—"; }
+function object(value: unknown): JsonRecord { return value && typeof value === "object" && !Array.isArray(value) ? value as JsonRecord : {}; }
+function list(value: unknown): JsonRecord[] { return Array.isArray(value) ? value.filter((item): item is JsonRecord => Boolean(item) && typeof item === "object" && !Array.isArray(item)) : []; }
 
 export default async function Engineering360Page({ params }: Props) {
   const { intakeId } = await params;
   const db = await createClient();
-
-  const { data: intake } = await db
-    .from("engineering_intakes")
-    .select("id,opportunity_id,load_profile_id,system_type,design_objective,status,autonomy_hours,created_at,opportunities(id,reference,title,customer_id),sites(id,name,postcode),load_profiles(id,name,status,source,annual_energy_kwh,average_daily_energy_kwh,peak_demand_kw,essential_peak_demand_kw)")
-    .eq("id", intakeId)
-    .single();
-
+  const { data: intake, error: intakeError } = await db.from("engineering_intakes").select("id,opportunity_id,load_profile_id,system_type,design_objective,status,autonomy_hours,created_at,opportunities(id,reference,title,customer_id),sites(id,name,postcode),load_profiles(id,name,status,source,annual_energy_kwh,average_daily_energy_kwh,peak_demand_kw,essential_peak_demand_kw)").eq("id", intakeId).single();
+  if (intakeError && intakeError.code !== "PGRST116") throw new Error(`Engineering intake could not be loaded: ${intakeError.message}`);
   if (!intake) notFound();
 
-  const [{ data: calculations }, { data: designs }] = await Promise.all([
-    db
-      .from("engineering_calculations")
-      .select("id,revision,status,calculation_reference,engine_version,result_snapshot,validation_snapshot,created_at")
-      .eq("engineering_intake_id", intakeId)
-      .order("revision", { ascending: false }),
-    db
-      .from("system_designs")
-      .select("id,design_reference,revision,status,array_capacity_kwp,inverter_capacity_kw,battery_capacity_kwh,module_manufacturer,module_model,module_quantity,module_rating_wp,inverter_manufacturer,inverter_model,battery_manufacturer,battery_model,sld_svg,bom_snapshot,performance_snapshot,engineering_calculation_id,created_at")
-      .eq("opportunity_id", intake.opportunity_id)
-      .order("created_at", { ascending: false }),
+  const [{ data: calculations, error: calculationError }, { data: designs, error: designError }] = await Promise.all([
+    db.from("engineering_calculations").select("id,revision,status,calculation_reference,engine_version,result_snapshot,validation_snapshot,created_at").eq("engineering_intake_id", intakeId).order("revision", { ascending: false }),
+    db.from("system_designs").select("id,design_reference,revision,status,array_capacity_kwp,inverter_capacity_kw,battery_capacity_kwh,module_manufacturer,module_model,module_quantity,module_rating_wp,inverter_manufacturer,inverter_model,battery_manufacturer,battery_model,sld_svg,bom_snapshot,performance_snapshot,engineering_calculation_id,created_at").eq("opportunity_id", intake.opportunity_id).order("created_at", { ascending: false }),
   ]);
+  if (calculationError) throw new Error(`Engineering calculations could not be loaded: ${calculationError.message}`);
+  if (designError) throw new Error(`System designs could not be loaded: ${designError.message}`);
 
   const opportunity = relation(intake.opportunities);
   const site = relation(intake.sites);
   const load = relation(intake.load_profiles);
   const latestCalculation = calculations?.[0] ?? null;
   const latestDesign = designs?.[0] ?? null;
-  const result = object(latestCalculation?.result_snapshot);
   const validation = list(latestCalculation?.validation_snapshot);
   const bom = list(latestDesign?.bom_snapshot);
   const performance = object(latestDesign?.performance_snapshot);
-  const blockingChecks = validation.filter((item) => String(item.severity) === "error").length;
-  const warningChecks = validation.filter((item) => String(item.severity) === "warning").length;
-  const bomReview = bom.filter((item) => String(item.status ?? "selected") === "engineering_review").length;
+  const blockingChecks = validation.filter((item) => String(item.severity) === "error");
+  const warningChecks = validation.filter((item) => String(item.severity) === "warning");
+  const bomReview = bom.filter((item) => String(item.status ?? "selected") === "engineering_review");
   const calculatorApproved = latestCalculation?.status === "reviewed";
   const designApproved = latestDesign?.status === "approved";
   const loadReady = load?.status === "ready";
+  const performanceReady = Object.keys(performance).length > 0;
+  const sldReady = Boolean(latestDesign?.sld_svg);
+  const bomReady = bom.length > 0 && bomReview.length === 0;
+  const packageApproved = Boolean(loadReady && calculatorApproved && designApproved && sldReady && bomReady);
   const systemLabel = systemTypeLabels[intake.system_type as SystemType] ?? titleCase(intake.system_type);
+  const updatedAt = latestDesign?.created_at ?? latestCalculation?.created_at ?? intake.created_at;
+  const currentAction = !loadReady ? "Complete the engineering-ready load profile" : !latestCalculation ? "Issue the first authoritative sizing revision" : !calculatorApproved ? "Review and approve the sizing revision" : !latestDesign ? "Compile the detailed system design" : !designApproved ? "Submit the design revision for approval" : !sldReady ? "Generate and verify the single-line diagram" : !bomReady ? "Resolve BOM engineering review items" : "Release the engineering package";
+  const blocker = blockingChecks.length ? `${blockingChecks.length} calculation ${blockingChecks.length === 1 ? "error blocks" : "errors block"} progression.` : !loadReady ? "The demand basis is not engineering-ready." : !calculatorApproved ? "The authoritative sizing revision is not approved." : !designApproved ? "The detailed design revision is not approved." : !sldReady ? "The controlled SLD has not been generated." : !bomReady ? "The BOM is incomplete or contains engineering-review lines." : null;
 
-  const nav = [
-    { label: "Overview", href: "#overview" },
-    { label: "Load Profile", href: "#load-profile" },
-    { label: "Calculator", href: "#calculator" },
-    { label: "Equipment", href: "#equipment" },
-    { label: "Design", href: "#design" },
-    { label: "Performance", href: "#performance" },
-    { label: "SLD", href: "#sld" },
-    { label: "BOM", href: "#bom" },
-    { label: "Engineering Review", href: "#engineering-review" },
+  const stageInputs: Array<{ label: string; href: string; done: boolean; available: boolean }> = [
+    { label: "Load profile", href: "#design-basis", done: loadReady, available: true },
+    { label: "System sizing", href: `/dashboard/engineering/calculators/${intakeId}`, done: calculatorApproved, available: loadReady },
+    { label: "Equipment", href: "#design-basis", done: Boolean(latestDesign?.module_model && latestDesign?.inverter_model), available: Boolean(latestCalculation) },
+    { label: "System design", href: "#active-work", done: designApproved, available: calculatorApproved },
+    { label: "Performance", href: "#active-work", done: performanceReady, available: Boolean(latestDesign) },
+    { label: "Electrical / SLD", href: "#active-work", done: sldReady, available: Boolean(latestDesign) },
+    { label: "BOM", href: "#active-work", done: bomReady, available: Boolean(latestDesign) },
+    { label: "Design review", href: "#governance", done: packageApproved, available: Boolean(latestDesign) },
+    { label: "IFC release", href: "#dependencies", done: packageApproved, available: packageApproved },
   ];
+  const firstIncomplete = stageInputs.findIndex((stage) => !stage.done);
+  const stages = stageInputs.map((stage, index) => ({ ...stage, state: (stage.done ? "completed" : index === firstIncomplete && stage.available ? "current" : stage.available ? "available" : index > firstIncomplete ? "blocked" : "not-started") as StageState }));
+  const date = new Intl.DateTimeFormat("en-GB", { day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" });
 
-  const reviewState = !loadReady
-    ? "Load Profile required"
-    : !latestCalculation
-      ? "Calculator revision required"
-      : !calculatorApproved
-        ? "Calculator review required"
-        : !latestDesign
-          ? "Detailed Design required"
-          : !designApproved
-            ? "Design approval required"
-            : bomReview
-              ? "BOM engineering review required"
-              : "Engineering package approved";
-
-  return (
-    <RecordWorkspace>
-      <RecordHeader
-        eyebrow="Engineering 360"
-        title={String(opportunity?.reference ?? "Engineering record")}
-        meta={<>{String(opportunity?.title ?? "Engineering case")} · {String(site?.name ?? "Site")}{site?.postcode ? ` · ${String(site.postcode)}` : ""} · {systemLabel} · {titleCase(intake.design_objective)}</>}
-        actions={<><Link href="/dashboard/engineering" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Engineering workspace</Link>{opportunity?.id ? <Link href={`/dashboard/opportunities/${String(opportunity.id)}`} className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Opportunity</Link> : null}</>}
-      />
-      <RecordWorkspaceNav items={nav} ariaLabel="Engineering record navigation" />
-
-      <RecordWorkspaceSection id="overview" eyebrow="Overview" title="Engineering basis and progression" description="One governed record for demand, sizing, equipment, detailed design, performance, SLD, BOM and final engineering review.">
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-6">
-          <Metric label="System" value={systemLabel} />
-          <Metric label="Intake" value={titleCase(intake.status)} />
-          <Metric label="Load Profile" value={loadReady ? "Ready" : "Not ready"} tone={loadReady ? "good" : "warn"} />
-          <Metric label="Calculator" value={calculatorApproved ? "Approved" : latestCalculation ? "Review required" : "Not issued"} tone={calculatorApproved ? "good" : "warn"} />
-          <Metric label="Design" value={designApproved ? "Approved" : latestDesign ? titleCase(latestDesign.status) : "Not compiled"} tone={designApproved ? "good" : "warn"} />
-          <Metric label="Engineering gate" value={reviewState} tone={reviewState === "Engineering package approved" ? "good" : "warn"} />
+  return <div className="mx-auto max-w-[1720px]" data-testid="engineering-project-workspace">
+    <header className="app-panel overflow-hidden">
+      <div className="flex flex-col gap-4 p-4 lg:flex-row lg:items-start lg:justify-between lg:p-5">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2"><span className="text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--accent-text)]">Engineering project</span><LifecycleStatus label={titleCase(intake.status)} tone={packageApproved ? "success" : "warning"} /><ApprovalState label={latestDesign ? `Revision ${latestDesign.revision}` : "No design revision"} approved={designApproved} /></div>
+          <h1 className="mt-2 text-2xl font-semibold tracking-[-0.03em] md:text-[28px]">{String(opportunity?.title ?? opportunity?.reference ?? "Engineering record")}</h1>
+          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-[var(--text-secondary)]"><span className="font-semibold text-[var(--foreground)]">{String(opportunity?.reference ?? intake.id)}</span><span>{String(site?.name ?? "No site linked")}{site?.postcode ? ` · ${String(site.postcode)}` : ""}</span><span>{systemLabel}</span><span>{titleCase(intake.design_objective)}</span><span>Updated {date.format(new Date(updatedAt))}</span></div>
         </div>
-      </RecordWorkspaceSection>
+        <div className="flex flex-wrap gap-2">{opportunity?.id ? <Link href={`/dashboard/opportunities/${String(opportunity.id)}`} className={`${button} border-[var(--line-strong)] bg-[var(--background)]`}>Project overview</Link> : null}<Link href="/dashboard/documents" className={`${button} border-[var(--line-strong)] bg-[var(--background)]`}><FileText aria-hidden="true" size={14} />Documents</Link><Link href="#revision-history" className={`${button} border-[var(--line-strong)] bg-[var(--background)]`}><FileClock aria-hidden="true" size={14} />Revision history</Link></div>
+      </div>
+      <nav aria-label="Engineering stages" className="border-t border-[var(--line)] bg-[var(--surface-subtle)]"><ol className="grid grid-cols-1 sm:grid-cols-3 xl:grid-cols-9">{stages.map((stage, index) => <li key={stage.label} className="border-b border-[var(--line)] sm:border-r xl:border-b-0 last:border-r-0"><Link href={stage.href} aria-current={stage.state === "current" ? "step" : undefined} className={`flex min-h-14 items-center gap-2 px-3 py-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)] ${stage.state === "current" ? "bg-[var(--accent)] text-white" : "hover:bg-[var(--background)]"}`}><span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[9px] font-bold ${stage.state === "current" ? "border-white/70" : stage.state === "completed" ? "border-[var(--status-success)] bg-[var(--status-success)] text-white" : "border-[var(--line-strong)] text-[var(--text-secondary)]"}`}>{stage.state === "completed" ? "✓" : index + 1}</span><span className="min-w-0"><span className="block text-[10px] font-semibold leading-4">{stage.label}</span><span className={`block text-[8px] uppercase tracking-[0.08em] ${stage.state === "current" ? "text-white/80" : "text-[var(--text-tertiary)]"}`}>{stage.state.replace("-", " ")}</span></span></Link></li>)}</ol></nav>
+    </header>
 
-      <RecordWorkspaceSection id="load-profile" eyebrow="01 · Load Profile" title={String(load?.name ?? "Demand model")} description="Demand, operating schedule and consumption evidence define the sizing basis for every system type." action={load?.id ? <Link href={`/dashboard/engineering/load-profiles/${String(load.id)}`} className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Open Load Profile</Link> : null}>
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">
-          <Detail label="Status" value={loadReady ? "Engineering-ready" : "Requires completion"} />
-          <Detail label="Annual demand" value={load?.annual_energy_kwh == null ? "—" : `${number(load.annual_energy_kwh, 0)} kWh`} />
-          <Detail label="Average daily" value={load?.average_daily_energy_kwh == null ? "—" : `${number(load.average_daily_energy_kwh)} kWh`} />
-          <Detail label="Peak demand" value={load?.peak_demand_kw == null ? "—" : `${number(load.peak_demand_kw)} kW`} />
-          <Detail label="Essential peak" value={load?.essential_peak_demand_kw == null ? "—" : `${number(load.essential_peak_demand_kw)} kW`} />
-        </div>
-      </RecordWorkspaceSection>
+    <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(250px,0.72fr)_minmax(520px,1.65fr)_minmax(280px,0.78fr)]">
+      <aside id="design-basis" className="app-panel self-start overflow-hidden xl:sticky xl:top-[74px]"><PanelHeading eyebrow="Design basis" title="Inputs & constraints" /><DefinitionGroup title="Site information" items={[["Site", String(site?.name ?? "Not linked")], ["Location", String(site?.postcode ?? "Not recorded")], ["Facility type", "Not recorded in intake"], ["System", systemLabel]]} /><DefinitionGroup title="Utility & demand" items={[["Load source", titleCase(load?.source ?? "Not recorded")], ["Annual energy", load?.annual_energy_kwh == null ? "—" : `${number(load.annual_energy_kwh, 0)} kWh`], ["Peak demand", load?.peak_demand_kw == null ? "—" : `${number(load.peak_demand_kw)} kW`], ["Essential peak", load?.essential_peak_demand_kw == null ? "—" : `${number(load.essential_peak_demand_kw)} kW`]]} /><DefinitionGroup title="Selected equipment" items={[["PV module", latestDesign ? [latestDesign.module_manufacturer, latestDesign.module_model].filter(Boolean).join(" ") || "Not selected" : "Not selected"], ["Modules", latestDesign?.module_quantity == null ? "—" : `${latestDesign.module_quantity} × ${latestDesign.module_rating_wp ?? "?"} W`], ["Inverter / PCS", latestDesign ? [latestDesign.inverter_manufacturer, latestDesign.inverter_model].filter(Boolean).join(" ") || "Not selected" : "Not selected"], ["Mounting", "Not recorded in design"]]} /><div className="border-t border-[var(--line)] p-4"><h3 className="text-[10px] font-bold uppercase tracking-[0.12em]">Constraints & standards</h3><ul className="mt-2 space-y-2 text-[11px] leading-4 text-[var(--text-secondary)]"><li>{blockingChecks.length ? `${blockingChecks.length} blocking calculation checks` : "No blocking calculation checks"}</li><li>{warningChecks.length ? `${warningChecks.length} warnings require review` : "No unresolved calculation warnings"}</li><li>Standards register is not linked to this intake.</li></ul></div></aside>
 
-      <RecordWorkspaceSection id="calculator" eyebrow="02 · Calculator" title="Authoritative system sizing" description="Saved revisions are recomputed by Python HelioCalc. Browser calculations remain previews only." action={<Link href={`/dashboard/engineering/calculators/${intakeId}`} className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Open Calculator</Link>}>
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-6">
-          <Detail label="Revision" value={latestCalculation ? `R${latestCalculation.revision}` : "Not issued"} />
-          <Detail label="Authority" value={latestCalculation?.engine_version ?? "Python HelioCalc"} />
-          <Detail label="PV sizing" value={result.recommendedPvKwp == null ? "—" : `${number(result.recommendedPvKwp, 2)} kWp`} />
-          <Detail label="Inverter" value={result.recommendedInverterAcKw == null ? "—" : `${number(result.recommendedInverterAcKw, 2)} kW`} />
-          <Detail label="BESS" value={result.batteryNominalKwh == null ? "—" : `${number(result.batteryNominalKwh)} kWh`} />
-          <Detail label="Validation" value={blockingChecks ? `${blockingChecks} blocking errors` : warningChecks ? `${warningChecks} warnings` : latestCalculation ? "Pass" : "Awaiting revision"} />
-        </div>
-      </RecordWorkspaceSection>
+      <main id="active-work" className="min-w-0 space-y-4">
+        <section className="app-panel overflow-hidden"><div className="app-toolbar flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"><div><p className="app-kicker">Active work product</p><h2 className="mt-1 text-base font-semibold">System design · {latestDesign?.design_reference ?? "Awaiting first revision"}</h2></div><div className="flex flex-wrap items-center gap-2"><ApprovalState label={latestDesign ? titleCase(latestDesign.status) : "Not started"} approved={designApproved} />{latestDesign ? <Link href={`/dashboard/designs/${latestDesign.id}`} className={`${button} border-[var(--line-strong)] bg-[var(--background)]`}>Open source record <ArrowRight aria-hidden="true" size={13} /></Link> : <Link href="/dashboard/designs" className={`${button} border-[var(--line-strong)] bg-[var(--background)]`}>Design register</Link>}</div></div>
+          <div className="workspace-grid relative min-h-[330px] overflow-hidden border-b border-[var(--line)] bg-[#eeece4] p-5 sm:p-8">{latestDesign ? <div className="mx-auto flex min-h-[270px] max-w-3xl items-center justify-center"><div className="relative w-full rotate-[-2deg] border border-[#9c9a8f] bg-[#c8c5b9] p-5 shadow-[0_8px_20px_rgba(38,37,33,0.12)]"><div className="grid grid-cols-6 gap-1.5 border border-[#777a72] bg-[#8f9289] p-3 sm:grid-cols-10">{Array.from({ length: Math.min(Math.max(Number(latestDesign.module_quantity ?? 30), 18), 50) }).map((_, index) => <span key={index} className="aspect-[1.6/1] border border-[#758aa0] bg-[#273f55] shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]" />)}</div><div className="absolute -bottom-3 right-5 border border-[var(--line-strong)] bg-[var(--background)] px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.08em]">Schematic array preview</div></div></div> : <div className="flex min-h-[270px] flex-col items-center justify-center text-center"><Layers3 aria-hidden="true" size={30} className="text-[var(--text-tertiary)]" /><p className="mt-3 text-sm font-semibold">No controlled design model</p><p className="mt-1 max-w-sm text-xs leading-5 text-[var(--text-secondary)]">A schematic preview appears only after a system design revision is stored. No CAD or live model integration is implied.</p></div>}<p className="absolute bottom-3 left-4 max-w-[70%] text-[9px] leading-4 text-[var(--text-secondary)]">Technical representation derived from stored design quantities. It is not a CAD, GIS, or survey model.</p></div>
+          <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4"><EngineeringMetric label="PV array" value={latestDesign?.array_capacity_kwp == null ? "—" : number(latestDesign.array_capacity_kwp, 2)} unit="kWp" /><EngineeringMetric label="Inverter" value={latestDesign?.inverter_capacity_kw == null ? "—" : number(latestDesign.inverter_capacity_kw, 2)} unit="kW" /><EngineeringMetric label="BESS" value={latestDesign?.battery_capacity_kwh == null ? "—" : number(latestDesign.battery_capacity_kwh)} unit="kWh" /><EngineeringMetric label="DC/AC ratio" value={latestDesign?.array_capacity_kwp && latestDesign?.inverter_capacity_kw ? number(Number(latestDesign.array_capacity_kwp) / Number(latestDesign.inverter_capacity_kw), 2) : "—"} detail="Derived from stored capacities" /></div>
+        </section>
+        <section className="app-panel overflow-hidden"><PanelHeading eyebrow="Controlled outputs" title="Extraction & artefacts" /><div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 lg:grid-cols-4"><Artefact icon={<Layers3 size={15} />} label="Calculation" value={latestCalculation ? `${latestCalculation.calculation_reference} · R${latestCalculation.revision}` : "Not issued"} state={calculatorApproved ? "Reviewed" : "Action required"} href={`/dashboard/engineering/calculators/${intakeId}`} /><Artefact icon={<FileText size={15} />} label="Single-line diagram" value={sldReady ? "Generated from design" : "Not generated"} state={sldReady ? "Controlled" : "Blocked"} href={latestDesign ? `/dashboard/designs/${latestDesign.id}` : "/dashboard/designs"} /><Artefact icon={<Box size={15} />} label="Bill of materials" value={`${bom.length} generated lines`} state={bomReady ? "Ready" : bomReview.length ? `${bomReview.length} review lines` : "Incomplete"} href={latestDesign ? `/dashboard/designs/${latestDesign.id}#bom` : "/dashboard/boms"} /><Artefact icon={<FileClock size={15} />} label="Performance" value={performanceReady ? `${number(performance.annualEnergyKwh ?? performance.annual_energy_kwh, 0)} kWh/year` : "Not generated"} state={performanceReady ? "Stored snapshot" : "Pending"} href={latestDesign ? `/dashboard/designs/${latestDesign.id}` : "/dashboard/designs"} /></div></section>
+      </main>
 
-      <RecordWorkspaceSection id="equipment" eyebrow="03 · Equipment" title="Datasheet-governed equipment" description="Approved equipment must remain compatible with the sizing basis and becomes an input to detailed electrical design." action={<Link href="/dashboard/engineering/equipment" className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Equipment Library</Link>}>
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4">
-          <Detail label="PV module" value={latestDesign ? [latestDesign.module_manufacturer, latestDesign.module_model].filter(Boolean).join(" ") || "Not selected" : "Awaiting Detailed Design"} />
-          <Detail label="Module quantity" value={latestDesign?.module_quantity == null ? "—" : `${latestDesign.module_quantity} × ${latestDesign.module_rating_wp ?? "?"} W`} />
-          <Detail label="Inverter / PCS" value={latestDesign ? [latestDesign.inverter_manufacturer, latestDesign.inverter_model].filter(Boolean).join(" ") || "Not selected" : "Awaiting Detailed Design"} />
-          <Detail label="Battery" value={latestDesign ? [latestDesign.battery_manufacturer, latestDesign.battery_model].filter(Boolean).join(" ") || "Not applicable / not selected" : "Awaiting Detailed Design"} />
-        </div>
-      </RecordWorkspaceSection>
+      <aside id="governance" className="space-y-4 self-start xl:sticky xl:top-[74px]"><section className="app-panel overflow-hidden"><PanelHeading eyebrow="Governance" title="Decision & next action" /><div className="space-y-3 p-3"><NextAction title={currentAction} detail="Progression follows the governed engineering sequence shown above." owner="Engineering authority" action={<Link href={!latestCalculation ? `/dashboard/engineering/calculators/${intakeId}` : latestDesign ? `/dashboard/designs/${latestDesign.id}` : "/dashboard/designs"} className={`${button} w-full border-[var(--accent)] bg-[var(--accent)] text-white`}>Continue engineering <ArrowRight aria-hidden="true" size={13} /></Link>} /><BlockerPanel clear={!blocker} title={blocker ? "Progression blocked" : "No blocking condition"} detail={blocker ?? "The stored engineering checks currently permit the next governed action."} /></div></section>
+        <section className="app-panel overflow-hidden"><PanelHeading eyebrow="Review checklist" title="Release evidence" /><ul className="divide-y divide-[var(--line)] px-4"><EngineeringCheck label="Demand basis ready" state={loadReady ? "pass" : "blocked"} /><EngineeringCheck label="Sizing reviewed" state={calculatorApproved ? "pass" : latestCalculation ? "warning" : "blocked"} /><EngineeringCheck label="Design approved" state={designApproved ? "pass" : latestDesign ? "warning" : "pending"} /><EngineeringCheck label="SLD generated" state={sldReady ? "pass" : "pending"} /><EngineeringCheck label="BOM resolved" state={bomReady ? "pass" : bomReview.length ? "blocked" : "pending"} /></ul></section>
+        <section id="revision-history" className="app-panel overflow-hidden"><PanelHeading eyebrow="Control" title="Authority & revisions" /><div className="divide-y divide-[var(--line)] text-[11px]"><div className="p-4"><p className="font-semibold">Design authority</p><p className="mt-1 leading-4 text-[var(--text-secondary)]">No named authority is stored on this intake. Approval remains governed by the existing design status.</p></div>{(designs ?? []).slice(0, 3).map((design) => <Link key={design.id} href={`/dashboard/designs/${design.id}`} className="flex min-h-11 items-center justify-between gap-3 px-4 py-2.5 hover:bg-[var(--surface-subtle)]"><span><span className="block font-semibold">{design.design_reference} · R{design.revision}</span><span className="mt-0.5 block text-[10px] text-[var(--text-secondary)]">{date.format(new Date(design.created_at))}</span></span><LifecycleStatus label={titleCase(design.status)} tone={design.status === "approved" ? "success" : "warning"} /></Link>)}{!designs?.length ? <p className="p-4 text-[var(--text-secondary)]">No design revisions have been issued.</p> : null}</div></section>
+      </aside>
+    </div>
 
-      <RecordWorkspaceSection id="design" eyebrow="04 · Design" title="Detailed engineering package" description="The design freezes selected equipment, array/inverter/BESS capacities and the compiled electrical basis." action={latestDesign ? <Link href={`/dashboard/designs/${latestDesign.id}`} className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Open Design {latestDesign.design_reference}</Link> : <Link href="/dashboard/designs" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">Design register</Link>}>
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">
-          <Detail label="Design revision" value={latestDesign ? `${latestDesign.design_reference} · R${latestDesign.revision}` : "Not compiled"} />
-          <Detail label="Status" value={latestDesign ? titleCase(latestDesign.status) : "Not started"} />
-          <Detail label="PV array" value={latestDesign?.array_capacity_kwp == null ? "—" : `${number(latestDesign.array_capacity_kwp, 2)} kWp`} />
-          <Detail label="Inverter" value={latestDesign?.inverter_capacity_kw == null ? "—" : `${number(latestDesign.inverter_capacity_kw, 2)} kW`} />
-          <Detail label="BESS" value={latestDesign?.battery_capacity_kwh == null ? "—" : `${number(latestDesign.battery_capacity_kwh)} kWh`} />
-        </div>
-      </RecordWorkspaceSection>
-
-      <RecordWorkspaceSection id="performance" eyebrow="05 · Performance" title="Yield and performance basis" description="Performance evidence is stored with the detailed design so proposal and review use the same governed engineering revision.">
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4">
-          <Detail label="Performance model" value={Object.keys(performance).length ? "Available" : "Not generated"} />
-          <Detail label="Annual energy" value={performance.annualEnergyKwh == null && performance.annual_energy_kwh == null ? "—" : `${number(performance.annualEnergyKwh ?? performance.annual_energy_kwh, 0)} kWh`} />
-          <Detail label="Specific yield" value={performance.specificYieldKwhPerKwp == null && performance.specific_yield_kwh_per_kwp == null ? "—" : `${number(performance.specificYieldKwhPerKwp ?? performance.specific_yield_kwh_per_kwp, 0)} kWh/kWp`} />
-          <Detail label="Basis" value={Object.keys(performance).length ? "Stored design performance snapshot" : "Run performance after Detailed Design"} />
-        </div>
-      </RecordWorkspaceSection>
-
-      <RecordWorkspaceSection id="sld" eyebrow="06 · SLD" title="Single-line diagram" description="The SLD is generated from the same compiled electrical model as the BOM, reducing divergence between drawings and materials.">
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-3">
-          <Detail label="SLD state" value={latestDesign?.sld_svg ? "Generated" : "Not generated"} />
-          <Detail label="Design source" value={latestDesign ? latestDesign.design_reference : "No Detailed Design"} />
-          <Detail label="Governance" value={latestDesign?.sld_svg ? "Bound to this design revision" : "Detailed Design required"} />
-        </div>
-      </RecordWorkspaceSection>
-
-      <RecordWorkspaceSection id="bom" eyebrow="07 · BOM" title="Generated bill of materials" description="The baseline BOM is calculated from engineering logic, equipment selections and design routes. Controlled exceptions remain a separate audited overlay." action={latestDesign ? <Link href={`/dashboard/designs/${latestDesign.id}#bom`} className="inline-flex min-h-10 items-center border border-[var(--accent)] px-4 text-xs font-semibold text-[var(--accent)]">Open governed BOM</Link> : <Link href="/dashboard/boms" className="inline-flex min-h-10 items-center border border-[var(--line)] px-4 text-xs font-semibold">BOM register</Link>}>
-        <div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-4">
-          <Detail label="Generated lines" value={String(bom.length)} />
-          <Detail label="Engineering review lines" value={String(bomReview)} />
-          <Detail label="Baseline" value={bom.length ? "HelioCalc / compiled design" : "Not generated"} />
-          <Detail label="Procurement state" value={!designApproved ? "Design approval required" : !bom.length ? "BOM incomplete" : bomReview ? "Engineering review required" : "Ready for procurement"} />
-        </div>
-      </RecordWorkspaceSection>
-
-      <RecordWorkspaceSection id="engineering-review" eyebrow="08 · Engineering Review" title="Final engineering gate" description="The package can move toward proposal and contract only when the demand basis, authoritative sizing, detailed design and generated BOM are governed and reviewable.">
-        <div className="grid gap-px bg-[var(--line)] md:grid-cols-2 xl:grid-cols-5">
-          <ReviewGate label="Load Profile" pass={Boolean(loadReady)} value={loadReady ? "Ready" : "Required"} />
-          <ReviewGate label="Calculator" pass={Boolean(calculatorApproved)} value={calculatorApproved ? "Approved" : latestCalculation ? "Review required" : "Required"} />
-          <ReviewGate label="Design" pass={Boolean(designApproved)} value={designApproved ? "Approved" : latestDesign ? titleCase(latestDesign.status) : "Required"} />
-          <ReviewGate label="SLD + BOM" pass={Boolean(latestDesign?.sld_svg && bom.length && !bomReview)} value={latestDesign?.sld_svg && bom.length && !bomReview ? "Complete" : "Incomplete / review"} />
-          <ReviewGate label="Engineering release" pass={reviewState === "Engineering package approved"} value={reviewState} />
-        </div>
-      </RecordWorkspaceSection>
-    </RecordWorkspace>
-  );
+    <section id="dependencies" className="app-panel mt-4 overflow-hidden"><PanelHeading eyebrow="Downstream dependencies" title="Impact of this engineering decision" /><div className="grid gap-px bg-[var(--line)] sm:grid-cols-2 xl:grid-cols-5">{[["Electrical design", sldReady ? "SLD available" : "Awaiting controlled SLD", sldReady], ["Performance model", performanceReady ? "Stored design snapshot" : "Awaiting performance output", performanceReady], ["BOM & procurement", bomReady ? `${bom.length} lines ready` : "BOM release blocked", bomReady], ["Commercial proposal", packageApproved ? "Engineering basis available" : "Engineering gate incomplete", packageApproved], ["Construction release", packageApproved ? "Eligible for governed release" : "IFC release unavailable", packageApproved]].map(([label, value, ready]) => <div key={String(label)} className="bg-[var(--background)] p-4"><div className="flex items-start justify-between gap-2"><p className="text-xs font-semibold">{String(label)}</p><LifecycleStatus label={ready ? "Ready" : "Dependent"} tone={ready ? "success" : "neutral"} /></div><p className="mt-2 text-[11px] leading-5 text-[var(--text-secondary)]">{String(value)}</p></div>)}</div></section>
+  </div>;
 }
 
-function Metric({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" }) {
-  return <div className="bg-[var(--background)] p-5"><p className="app-kicker">{label}</p><p className={`mt-2 text-sm font-semibold ${tone === "good" ? "text-emerald-700" : tone === "warn" ? "text-amber-800" : ""}`}>{value}</p></div>;
-}
-
-function Detail({ label, value }: { label: string; value: string }) {
-  return <div className="bg-[var(--background)] p-5"><p className="app-kicker">{label}</p><p className="mt-2 text-sm font-medium">{value}</p></div>;
-}
-
-function ReviewGate({ label, pass, value }: { label: string; pass: boolean; value: string }) {
-  return <div className="bg-[var(--background)] p-5"><p className="app-kicker">{label}</p><p className={`mt-2 text-sm font-semibold ${pass ? "text-emerald-700" : "text-amber-800"}`}>{value}</p></div>;
-}
+function PanelHeading({ eyebrow, title }: { eyebrow: string; title: string }) { return <div className="app-toolbar px-4 py-3"><p className="app-kicker">{eyebrow}</p><h2 className="mt-1 text-sm font-semibold">{title}</h2></div>; }
+function DefinitionGroup({ title, items }: { title: string; items: Array<[string, string]> }) { return <section className="border-t border-[var(--line)] p-4 first:border-t-0"><h3 className="text-[10px] font-bold uppercase tracking-[0.12em]">{title}</h3><dl className="mt-2.5 space-y-2">{items.map(([label, value]) => <div key={label} className="flex items-start justify-between gap-4 text-[11px]"><dt className="text-[var(--text-secondary)]">{label}</dt><dd className="max-w-[60%] text-right font-medium tabular-nums">{value}</dd></div>)}</dl></section>; }
+function Artefact({ icon, label, value, state, href }: { icon: React.ReactNode; label: string; value: string; state: string; href: string }) { return <Link href={href} className="group bg-[var(--background)] p-4 hover:bg-[var(--surface-subtle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent)]"><div className="flex items-center gap-2 text-[var(--text-secondary)]">{icon}<span className="text-[9px] font-bold uppercase tracking-[0.1em]">{label}</span></div><p className="mt-3 text-xs font-semibold">{value}</p><p className="mt-1 text-[10px] text-[var(--text-secondary)]">{state}</p></Link>; }

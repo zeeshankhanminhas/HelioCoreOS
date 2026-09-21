@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useMemo, useState } from "react";
+import { Bell, ChevronDown, ChevronRight, Menu, Search, SunMedium, X } from "lucide-react";
 
 const navigation = [
   {
@@ -228,7 +229,7 @@ function currentGroupLabel(pathname: string) {
   return sectionLabels[moduleName] ?? "Command";
 }
 
-function Navigation({ onNavigate }: { onNavigate?: () => void }) {
+function Navigation({ onNavigate, query = "" }: { onNavigate?: () => void; query?: string }) {
   const pathname = usePathname();
   const activeGroup = currentGroupLabel(pathname);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
@@ -239,6 +240,10 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav className="space-y-1" aria-label="Primary navigation">
       {navigation.map((group) => {
+        const filteredItems = query.trim()
+          ? group.items.filter((item) => `${group.label} ${item.label}`.toLowerCase().includes(query.trim().toLowerCase()))
+          : group.items;
+        if (!filteredItems.length) return null;
         const matches = group.items.filter((item) => item.href === "/dashboard" ? pathname === item.href : pathname === item.href || pathname.startsWith(`${item.href}/`));
         const activeHref = [...matches].sort((a, b) => b.href.length - a.href.length)[0]?.href;
         const hasActive = Boolean(activeHref);
@@ -249,16 +254,16 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
             <button
               type="button"
               onClick={() => setExpanded((state) => ({ ...state, [group.label]: !open }))}
-              className={`flex w-full items-center justify-between gap-3 px-3 py-3 text-left ${focus}`}
-              aria-expanded={open}
+              className={`flex min-h-10 w-full items-center justify-between gap-3 px-3 py-2.5 text-left ${focus}`}
+              aria-expanded={query ? true : open}
             >
-              <span className={`text-[11px] font-semibold tracking-[0.01em] ${hasActive ? "text-[var(--foreground)]" : "text-[var(--sidebar-muted)]"}`}>{group.label}</span>
-              <span aria-hidden="true" className="text-[12px] text-[var(--sidebar-muted)]">{open ? "−" : "+"}</span>
+              <span className={`text-[10px] font-bold uppercase tracking-[0.12em] ${hasActive ? "text-white" : "text-[var(--sidebar-muted)]"}`}>{group.label}</span>
+              {query || open ? <ChevronDown aria-hidden="true" size={13} /> : <ChevronRight aria-hidden="true" size={13} />}
             </button>
 
-            {open ? (
+            {query || open ? (
               <div className="pb-2">
-                {group.items.map((item) => {
+                {filteredItems.map((item) => {
                   const active = item.href === activeHref;
                   return (
                     <Link
@@ -266,7 +271,7 @@ function Navigation({ onNavigate }: { onNavigate?: () => void }) {
                       href={item.href}
                       onClick={onNavigate}
                       aria-current={active ? "page" : undefined}
-                      className={`relative block border-l-2 px-3 py-2.5 text-[13px] leading-5 transition-colors ${focus} ${active ? "border-[var(--accent)] bg-[var(--sidebar-active)] font-semibold text-[var(--foreground)]" : "border-transparent text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-[var(--foreground)]"}`}
+                      className={`relative block min-h-10 border-l-2 px-3 py-2.5 text-[12px] leading-5 transition-colors ${focus} ${active ? "border-[var(--sidebar-active)] bg-[var(--sidebar-active)] font-semibold text-white" : "border-transparent text-[var(--sidebar-text)] hover:bg-[var(--sidebar-hover)] hover:text-white"}`}
                     >
                       {item.label}
                     </Link>
@@ -308,41 +313,42 @@ function PageContext() {
 export function WorkspaceShell({ children, userName, userRole, organisationName, signOutAction }: WorkspaceShellProps) {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const initials = useMemo(() => userName.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase() || "HC", [userName]);
   const currentArea = currentGroupLabel(pathname);
 
   const identity = (
     <div className="border-t border-[var(--sidebar-line)] px-3 py-3">
       <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center border border-[var(--line-strong)] bg-[var(--surface-subtle)] text-[11px] font-bold text-[var(--foreground)]">{initials}</div>
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--sidebar-line)] bg-[var(--sidebar-raised)] text-[11px] font-bold text-white">{initials}</div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[12px] font-semibold text-[var(--foreground)]">{userName}</p>
-          <p className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">{userRole}</p>
+          <p className="truncate text-[12px] font-semibold text-white">{userName}</p>
+          <p className="mt-0.5 truncate text-[10px] capitalize text-[var(--sidebar-muted)]">{userRole}</p>
         </div>
         <form action={signOutAction}>
-          <button type="submit" className={`text-[11px] font-semibold text-[var(--text-secondary)] hover:text-[var(--foreground)] ${focus}`}>Sign out</button>
+          <button type="submit" className={`min-h-10 text-[10px] font-semibold text-[var(--sidebar-muted)] hover:text-white ${focus}`}>Sign out</button>
         </form>
       </div>
     </div>
   );
 
   const brand = (
-    <div className="border-b border-[var(--sidebar-line)] px-4 py-4">
+    <div className="border-b border-[var(--sidebar-line)] px-4 py-[15px]">
       <Link href="/dashboard" className={`block ${focus}`}>
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[15px] font-bold tracking-[-0.025em] text-[var(--foreground)]">HelioCoreOS</span>
-          <span className="border border-[var(--accent-soft-border)] bg-[var(--accent-soft)] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.08em] text-[var(--accent-text)]">EPC</span>
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--accent)] text-white"><SunMedium aria-hidden="true" size={16} strokeWidth={2.2} /></span>
+          <span className="text-[15px] font-bold tracking-[-0.02em] text-white">HelioCore <span className="font-medium text-[var(--sidebar-muted)]">OS</span></span>
         </div>
       </Link>
-      <p className="mt-2 truncate text-[11px] text-[var(--text-secondary)]">{organisationName}</p>
+      <p className="mt-2 truncate pl-[38px] text-[10px] text-[var(--sidebar-muted)]">{organisationName}</p>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[244px_minmax(0,1fr)]">
+    <div className="min-h-screen bg-[var(--canvas)] lg:grid lg:grid-cols-[236px_minmax(0,1fr)]">
       <aside className="hidden border-r border-[var(--sidebar-line)] bg-[var(--sidebar)] lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col">
         {brand}
-        <div className="shell-scroll flex-1 overflow-y-auto px-2 py-2"><Navigation /></div>
+        <div className="shell-scroll flex-1 overflow-y-auto px-2 py-2"><Navigation query={searchQuery} /></div>
         {identity}
       </aside>
 
@@ -354,43 +360,58 @@ export function WorkspaceShell({ children, userName, userRole, organisationName,
               {brand}
               <button
                 onClick={() => setMobileOpen(false)}
-                className={`absolute right-3 top-3 flex h-8 w-8 items-center justify-center border border-[var(--line)] bg-[var(--background)] text-base text-[var(--foreground)] ${focus}`}
+                className={`absolute right-3 top-3 flex h-10 w-10 items-center justify-center border border-[var(--sidebar-line)] bg-[var(--sidebar-raised)] text-white ${focus}`}
                 aria-label="Close navigation"
               >
-                ×
+                <X aria-hidden="true" size={17} />
               </button>
             </div>
-            <div className="shell-scroll flex-1 overflow-y-auto px-2 py-2"><Navigation onNavigate={() => setMobileOpen(false)} /></div>
+            <div className="border-b border-[var(--sidebar-line)] p-3">
+              <label className="relative block">
+                <span className="sr-only">Filter workspace navigation</span>
+                <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--sidebar-muted)]" size={15} />
+                <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Find a workspace…" className="h-10 w-full border border-[var(--sidebar-line)] bg-[var(--sidebar-raised)] pl-9 pr-3 text-xs text-white placeholder:text-[var(--sidebar-muted)]" />
+              </label>
+            </div>
+            <div className="shell-scroll flex-1 overflow-y-auto px-2 py-2"><Navigation onNavigate={() => setMobileOpen(false)} query={searchQuery} /></div>
             {identity}
           </aside>
         </div>
       ) : null}
 
       <div className="min-w-0">
-        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-[var(--line)] bg-[var(--background)] px-4 md:px-6 lg:px-7 xl:px-8">
+        <header className="sticky top-0 z-30 flex h-[58px] items-center justify-between border-b border-[var(--line)] bg-[color:color-mix(in_srgb,var(--background)_94%,transparent)] px-4 backdrop-blur-sm md:px-5 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button
               onClick={() => setMobileOpen(true)}
-              className={`inline-flex h-9 items-center border border-[var(--line-strong)] bg-[var(--background)] px-3 text-[11px] font-semibold lg:hidden ${focus}`}
+              className={`inline-flex h-10 items-center gap-2 border border-[var(--line-strong)] bg-[var(--background)] px-3 text-[11px] font-semibold lg:hidden ${focus}`}
             >
-              Menu
+              <Menu aria-hidden="true" size={16} /> Menu
             </button>
-            <div className="min-w-0">
+            <div className="hidden min-w-0 sm:block lg:hidden xl:block">
               <p className="truncate text-[12px] font-semibold text-[var(--foreground)]">{currentArea}</p>
-              <p className="mt-0.5 truncate text-[11px] text-[var(--text-secondary)]">{organisationName}</p>
+              <p className="mt-0.5 truncate text-[10px] text-[var(--text-secondary)]">{organisationName}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Link href="/dashboard/tasks" className={`hidden border border-[var(--line)] px-3 py-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] sm:inline-flex ${focus}`}>My work</Link>
-            <Link href="/dashboard/approvals" className={`hidden border border-[var(--line)] px-3 py-2 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] sm:inline-flex ${focus}`}>Approvals</Link>
-            <span className="mx-1 hidden h-5 w-px bg-[var(--line)] sm:block" />
-            <div className="flex h-8 w-8 items-center justify-center border border-[var(--line-strong)] bg-[var(--surface-subtle)] text-[11px] font-bold text-[var(--foreground)]" title={userName}>{initials}</div>
+          <div className="flex flex-1 items-center justify-end gap-2 lg:justify-between lg:pl-8">
+            <label className="relative hidden w-full max-w-[480px] lg:block">
+              <span className="sr-only">Search workspace navigation</span>
+              <Search aria-hidden="true" className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-tertiary)]" size={15} />
+              <input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="Search workspace navigation…" className="h-9 w-full border border-[var(--line)] bg-[var(--surface-subtle)] pl-9 pr-14 text-xs placeholder:text-[var(--text-tertiary)]" />
+              <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 border border-[var(--line)] bg-[var(--background)] px-1.5 py-0.5 text-[9px] font-semibold text-[var(--text-tertiary)]">⌘ K</span>
+            </label>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Link href="/dashboard/tasks" className={`hidden min-h-10 items-center px-3 text-[11px] font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-subtle)] hover:text-[var(--foreground)] md:inline-flex ${focus}`}>My work</Link>
+              <Link href="/dashboard/approvals" aria-label="Approvals and notifications" className={`relative inline-flex h-10 w-10 items-center justify-center border border-[var(--line)] bg-[var(--background)] text-[var(--text-secondary)] hover:text-[var(--foreground)] ${focus}`}><Bell aria-hidden="true" size={16} /><span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--accent)]" /></Link>
+              <span className="mx-1 hidden h-5 w-px bg-[var(--line)] sm:block" />
+              <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[var(--line-strong)] bg-[var(--surface-subtle)] text-[10px] font-bold text-[var(--foreground)]" title={`${userName} · ${userRole}`}>{initials}</div>
+            </div>
           </div>
         </header>
 
         <PageContext />
-        <main className="px-4 py-5 md:px-6 md:py-6 lg:px-7 xl:px-8">{children}</main>
+        <main className="px-4 py-4 md:px-5 md:py-5 lg:px-6">{children}</main>
       </div>
     </div>
   );

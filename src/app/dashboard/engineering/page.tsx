@@ -64,19 +64,25 @@ export default function EngineeringPage() {
 
   useEffect(() => {
     let cancelled = false;
-    const client = createClient();
-    Promise.all([
-      client.from("opportunities").select("id,reference,title,customer_id,site_id,created_at").order("created_at", { ascending: false }).limit(50),
-      client.from("sites").select("id,name,postcode"),
-      client.from("engineering_intakes").select("id,opportunity_id,load_profile_id,system_type,design_objective,status,created_at").order("created_at", { ascending: false }).limit(20),
-      client.from("engineering_calculations").select("engineering_intake_id,revision,created_at").order("revision", { ascending: false }),
-      client.from("opportunity_readiness_items").select("opportunity_id,item_type,status,is_required"),
-    ]).then((results) => {
-      if (cancelled) return;
-      const failed = results.find((result) => result.error);
-      if (failed?.error) { setError(failed.error.message); return; }
-      setState({ opportunities: results[0].data ?? [], sites: results[1].data ?? [], intakes: results[2].data ?? [], calculations: results[3].data ?? [], readiness: results[4].data ?? [] });
-    }).catch((loadError) => { if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Engineering data could not be loaded."); });
+    async function load() {
+      try {
+        const client = createClient();
+        const results = await Promise.all([
+          client.from("opportunities").select("id,reference,title,customer_id,site_id,created_at").order("created_at", { ascending: false }).limit(50),
+          client.from("sites").select("id,name,postcode"),
+          client.from("engineering_intakes").select("id,opportunity_id,load_profile_id,system_type,design_objective,status,created_at").order("created_at", { ascending: false }).limit(20),
+          client.from("engineering_calculations").select("engineering_intake_id,revision,created_at").order("revision", { ascending: false }),
+          client.from("opportunity_readiness_items").select("opportunity_id,item_type,status,is_required"),
+        ]);
+        if (cancelled) return;
+        const failed = results.find((result) => result.error);
+        if (failed?.error) { setError(failed.error.message); return; }
+        setState({ opportunities: results[0].data ?? [], sites: results[1].data ?? [], intakes: results[2].data ?? [], calculations: results[3].data ?? [], readiness: results[4].data ?? [] });
+      } catch (loadError) {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Engineering data could not be loaded.");
+      }
+    }
+    void load();
     return () => { cancelled = true; };
   }, []);
 

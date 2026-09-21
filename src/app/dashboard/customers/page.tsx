@@ -54,7 +54,9 @@ export default function CustomersPage() {
       })));
     }
 
-    void load();
+    void load().catch((loadError: unknown) => {
+      if (!cancelled) setError(loadError instanceof Error ? loadError.message : "The customer register could not be loaded.");
+    });
     return () => {
       cancelled = true;
     };

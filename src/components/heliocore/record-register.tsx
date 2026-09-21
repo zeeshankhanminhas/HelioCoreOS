@@ -29,16 +29,16 @@ export function RecordRegister({ columns, rows, caption, emptyState, errorState,
         <div className="border border-[var(--line)] p-8">{errorState}</div>
       ) : rows.length ? (
         <>
-          <div className="hidden overflow-x-auto border-y border-[var(--line)] md:block">
+          <div className="hidden overflow-x-auto rounded-[4px] border border-[var(--line)] bg-[var(--background)] md:block">
             <table className="w-full border-collapse text-left">
               <caption className="sr-only">{caption}</caption>
-              <thead>
+              <thead className="bg-[var(--surface-subtle)]">
                 <tr className="border-b border-[var(--line)]">
                   {columns.map((column) => (
                     <th
                       key={column.key}
                       scope="col"
-                      className={`px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[var(--muted)] ${column.align === "right" ? "text-right" : ""} ${column.className ?? ""}`}
+                      className={`px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--muted)] ${column.align === "right" ? "text-right" : ""} ${column.className ?? ""}`}
                     >
                       {column.label}
                     </th>
@@ -47,11 +47,11 @@ export function RecordRegister({ columns, rows, caption, emptyState, errorState,
               </thead>
               <tbody className="divide-y divide-[var(--line)]">
                 {rows.map((row) => (
-                  <tr key={row.id} className="transition-colors hover:bg-black/[0.018] focus-within:bg-black/[0.025]">
+                  <tr key={row.id} className="transition-colors hover:bg-[var(--surface-subtle)] focus-within:bg-[var(--surface-selected)]">
                     {columns.map((column) => (
                       <td
                         key={column.key}
-                        className={`px-4 py-4 align-middle text-sm ${column.align === "right" ? "text-right" : ""} ${column.className ?? ""}`}
+                        className={`px-4 py-3 align-middle text-xs ${column.align === "right" ? "text-right" : ""} ${column.className ?? ""}`}
                       >
                         {row.cells[column.key]}
                       </td>
@@ -61,8 +61,8 @@ export function RecordRegister({ columns, rows, caption, emptyState, errorState,
               </tbody>
             </table>
           </div>
-          <div className="divide-y divide-[var(--line)] border-y border-[var(--line)] md:hidden">
-            {rows.map((row) => <article key={row.id} className="py-5">{row.mobile}</article>)}
+          <div className="divide-y divide-[var(--line)] rounded-[4px] border border-[var(--line)] bg-[var(--background)] md:hidden">
+            {rows.map((row) => <article key={row.id} className="p-4">{row.mobile}</article>)}
           </div>
         </>
       ) : (

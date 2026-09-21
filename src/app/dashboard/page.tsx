@@ -76,7 +76,14 @@ export default function DashboardPage() {
       setEngineeringLoading(false);
     }
 
-    void loadDashboard();
+    void loadDashboard().catch((loadError: unknown) => {
+      if (cancelled) return;
+      const message = loadError instanceof Error ? loadError.message : "The command centre could not be loaded.";
+      setError(message);
+      setEngineeringError(message);
+      setLoading(false);
+      setEngineeringLoading(false);
+    });
     return () => {
       cancelled = true;
     };

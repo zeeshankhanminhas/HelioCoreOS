@@ -37,7 +37,9 @@ export default function NewOpportunityPage() {
       setSites((siteResult.data ?? []) as Site[]);
       setProfiles((profileResult.data ?? []) as Profile[]);
     }
-    void load();
+    void load().catch((loadError: unknown) => {
+      if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Commercial context could not be loaded.");
+    });
     return () => { cancelled = true; };
   }, []);
 

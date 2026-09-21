@@ -8,7 +8,7 @@ type WorkspaceToolbarProps = {
 
 export function WorkspaceToolbar({ children, actions, summary }: WorkspaceToolbarProps) {
   return (
-    <section aria-label="Register controls" className="mt-6 border-b border-[var(--line)] pb-5">
+    <section aria-label="Register controls" className="mt-5 rounded-t-[4px] border border-[var(--line)] bg-[var(--surface-subtle)] p-3">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
         <div className="grid min-w-0 flex-1 gap-3 md:grid-cols-[minmax(260px,1fr)_220px_auto]">{children}</div>
         {(summary || actions) ? (

@@ -50,7 +50,9 @@ export default function SitesPage() {
       })));
     }
 
-    void load();
+    void load().catch((loadError: unknown) => {
+      if (!cancelled) setError(loadError instanceof Error ? loadError.message : "The site register could not be loaded.");
+    });
     return () => {
       cancelled = true;
     };

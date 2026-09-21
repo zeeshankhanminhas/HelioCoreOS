@@ -14,16 +14,16 @@ type MetricStripProps = {
 
 const emphasisClass: Record<NonNullable<MetricItem["emphasis"]>, string> = {
   default: "text-[var(--foreground)]",
-  positive: "text-emerald-800",
-  warning: "text-amber-800",
-  critical: "text-red-800",
+  positive: "text-[var(--status-success)]",
+  warning: "text-[var(--status-warning)]",
+  critical: "text-[var(--status-danger)]",
 };
 
 export function MetricStrip({ items, ariaLabel = "Operational metrics" }: MetricStripProps) {
   if (!items.length) return null;
 
   return (
-    <section aria-label={ariaLabel} className="mt-7 border-y border-[var(--line)]">
+    <section aria-label={ariaLabel} className="mt-5 overflow-hidden rounded-[4px] border border-[var(--line)] bg-[var(--background)]">
       <dl className="grid sm:grid-cols-2 xl:grid-cols-4">
         {items.map((item, index) => (
           <div
