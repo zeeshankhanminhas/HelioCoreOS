@@ -1,5 +1,5 @@
-import { ViewPlaceholder } from "./_components/view-placeholder";
+import { DashboardWorkspace } from "./_components/module-workspaces";
 
 export default function ScaffoldHomePage(){
-  return <ViewPlaceholder title="Dashboard" path="Dashboard"/>;
+  return <DashboardWorkspace/>;
 }
