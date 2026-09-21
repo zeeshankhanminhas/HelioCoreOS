@@ -10,12 +10,12 @@ export function ScaffoldShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-[#f7f6f2] text-[#17191d]">
-      <aside className="fixed inset-y-0 left-0 hidden w-[226px] flex-col border-r border-[#2d3237] bg-[#151a1e] text-white lg:flex">
-        <div className="border-b border-[#2b3034] px-4 py-4">
+      <aside className="fixed inset-y-0 left-0 hidden w-[218px] flex-col border-r border-[#2d3237] bg-[#151a1e] text-white lg:flex">
+        <div className="border-b border-[#2b3034] px-4 py-3.5">
           <Link href="/ui-scaffold" className="flex items-center gap-2.5">
-            <SunMedium className="text-[#f97316]" size={29} strokeWidth={1.8} />
+            <SunMedium className="text-[#f97316]" size={27} strokeWidth={1.8} />
             <div>
-              <div className="text-[20px] font-semibold tracking-[-0.03em]">HelioCore <span className="text-[#f97316]">OS</span></div>
+              <div className="text-[19px] font-semibold tracking-[-0.03em]">HelioCore <span className="text-[#f97316]">OS</span></div>
               <div className="mt-0.5 text-[10px] text-[#b2bac0]">Solar EPC Operating System</div>
             </div>
           </Link>
@@ -27,7 +27,7 @@ export function ScaffoldShell({ children }: { children: React.ReactNode }) {
             const Icon = item.icon;
             return (
               <div key={item.href}>
-                <Link href={item.href} className={`mx-2 flex min-h-10 items-center gap-3 rounded-[5px] px-3 text-[12px] ${active ? "bg-[#f97316] font-semibold text-white" : "text-[#d8dde1] hover:bg-[#23292e]"}`}>
+                <Link href={item.href} className={`mx-2 flex min-h-9 items-center gap-2.5 rounded-[4px] px-3 text-[11px] ${active ? "bg-[#f97316] font-semibold text-white" : "text-[#d8dde1] hover:bg-[#23292e]"}`}>
                   <Icon size={16} strokeWidth={1.8} />
                   <span className="flex-1">{item.label}</span>
                   {item.children ? <ChevronDown size={13} /> : null}
@@ -55,17 +55,17 @@ export function ScaffoldShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="lg:pl-[226px]">
-        <header className="sticky top-0 z-30 flex h-[56px] items-center border-b border-[#dfe2e5] bg-[#f7f8f8]/95 px-5 backdrop-blur">
-          <label className="relative hidden w-[475px] md:block">
+      <div className="lg:pl-[218px]">
+        <header className="sticky top-0 z-30 flex h-[52px] items-center border-b border-[#dfe2e5] bg-[#f7f8f8]/95 px-4 backdrop-blur">
+          <label className="relative hidden w-[440px] md:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#68717a]" size={15} />
-            <input className="h-9 w-full rounded-[3px] border border-[#d6dadd] bg-white pl-9 pr-3 text-[12px] outline-none placeholder:text-[#7f8790] focus:border-[#aeb5bb]" placeholder="Search projects, clients, documents..." />
+            <input className="h-8 w-full rounded-[3px] border border-[#d6dadd] bg-white pl-9 pr-3 text-[12px] outline-none placeholder:text-[#7f8790] focus:border-[#aeb5bb]" placeholder="Search projects, clients, documents..." />
           </label>
           <div className="ml-auto flex items-center gap-4">
-            <button aria-label="Notifications" className="relative flex h-9 w-9 items-center justify-center text-[#2a3137]"><Bell size={17} /><span className="absolute right-1.5 top-1 h-4 min-w-4 rounded-full bg-[#f97316] px-1 text-center text-[9px] leading-4 text-white">3</span></button>
+            <button aria-label="Notifications" className="relative flex h-8 w-8 items-center justify-center text-[#2a3137]"><Bell size={17} /><span className="absolute right-1.5 top-1 h-4 min-w-4 rounded-full bg-[#f97316] px-1 text-center text-[9px] leading-4 text-white">3</span></button>
             <div className="h-7 w-px bg-[#d8dcdf]" />
             <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#242a2f] text-[10px] font-semibold text-white">ZM</div>
+              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-[#242a2f] text-[10px] font-semibold text-white">ZM</div>
               <div className="hidden sm:block">
                 <p className="text-[12px] font-medium">Zeeshan Minhas</p>
                 <p className="text-[10px] text-[#6e7780]">Business Development</p>
