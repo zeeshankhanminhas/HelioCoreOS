@@ -1,10 +1,14 @@
 import { EngineeringPvLayout } from "../_components/engineering-pv-layout";
-import { ViewPlaceholder } from "../_components/view-placeholder";
-import { pageTitles } from "../_config/navigation";
+import { ModuleWorkspace } from "../_components/module-workspaces";
 
 export default async function ScaffoldView({params}:{params:Promise<{slug:string[]}>}){
   const {slug}=await params;
   const key=slug.join("/");
+
   if(key==="engineering/pv-layout") return <EngineeringPvLayout/>;
-  return <ViewPlaceholder title={pageTitles[key] ?? "Module"} path={slug.map(x=>x.replaceAll("-"," ")).join(" / ")}/>;
+  if(key==="projects/active") return <ModuleWorkspace moduleKey="projects" projectFilter="active"/>;
+  if(key==="projects/completed") return <ModuleWorkspace moduleKey="projects" projectFilter="completed"/>;
+
+  const moduleKey = slug[0];
+  return <ModuleWorkspace moduleKey={moduleKey}/>;
 }
