@@ -23,7 +23,7 @@ export function HCDataTable<TData>({
   searchColumn,
   searchPlaceholder = "Search...",
 }: {
-  columns: ColumnDef<TData, unknown>[];
+  columns: ColumnDef<TData>[];
   data: TData[];
   searchColumn?: string;
   searchPlaceholder?: string;
