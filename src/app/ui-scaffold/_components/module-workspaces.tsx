@@ -1,3 +1,4 @@
+import { ProjectsWorkspace } from "@/features/projects/projects-workspace";
 import {
   AlertTriangle, ArrowRight, BarChart3, Box, Building2, CalendarDays, CheckCircle2,
   CircleDollarSign, ClipboardCheck, Clock3, ContactRound, FileCheck2, FileText,
@@ -508,6 +509,8 @@ export function DashboardWorkspace() {
 }
 
 export function ModuleWorkspace({ moduleKey, projectFilter }: { moduleKey: string; projectFilter?: "active" | "completed" }) {
+  if (moduleKey === "projects") return <ProjectsWorkspace filter={projectFilter ?? "all"} />;
+
   const base = moduleConfigs[moduleKey] ?? moduleConfigs.projects;
   const config = moduleKey === "projects" && projectFilter
     ? {
