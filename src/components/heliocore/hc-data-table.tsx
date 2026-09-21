@@ -3,6 +3,7 @@
 import * as React from "react";
 import {
   type ColumnDef,
+  type RowData,
   columnFilteringFeature,
   columnVisibilityFeature,
   createFilteredRowModel,
@@ -40,7 +41,7 @@ export const hcTableFeatures = tableFeatures({
   },
 });
 
-export function HCDataTable<TData>({
+export function HCDataTable<TData extends RowData>({
   columns,
   data,
   searchPlaceholder = "Search...",
@@ -50,7 +51,7 @@ export function HCDataTable<TData>({
   searchColumn?: string;
   searchPlaceholder?: string;
 }) {
-  const table = useTable(
+  const table = useTable<typeof hcTableFeatures, TData>(
     {
       features: hcTableFeatures,
       columns,
