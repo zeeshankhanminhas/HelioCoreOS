@@ -1,3 +1,4 @@
+import { HCOperationalTable } from "@/components/heliocore/hc-operational-table";
 import { ProjectsWorkspace } from "@/features/projects/projects-workspace";
 import {
   AlertTriangle, ArrowRight, BarChart3, Box, Building2, CalendarDays, CheckCircle2,
@@ -600,14 +601,7 @@ function SectionHead({title,subtitle,action}:{title:string;subtitle?:string;acti
 }
 
 function WorkTable({columns,rows}:{columns:string[];rows:Row[]}) {
-  return <div className="overflow-x-auto"><table className="w-full min-w-[760px] table-fixed text-left">
-    <thead className="bg-[#f4f5f5]"><tr>{columns.map((c,i)=><th key={c} className={`px-3 py-2 text-[9px] font-semibold text-[#58636c] ${i===0?"w-[27%]":""}`}>{c}</th>)}<th className="w-[90px] px-3 py-2 text-[9px] font-semibold text-[#58636c]">Control</th></tr></thead>
-    <tbody className="divide-y divide-[#e7e9eb]">{rows.map((row)=><tr key={row.primary} className="hover:bg-[#fafaf8]">
-      <td className="px-3 py-2.5"><div className="text-[10px] font-semibold text-[#273139]">{row.primary}</div>{row.secondary?<div className="mt-0.5 text-[8px] text-[#7b858e]">{row.secondary}</div>:null}</td>
-      {row.values.map((v)=><td key={v} className="px-3 py-2.5 text-[9px] text-[#525d66]">{v}</td>)}
-      <td className="px-3 py-2.5"><StatusBadge label={row.status ?? "Open"} tone={row.tone}/></td>
-    </tr>)}</tbody>
-  </table></div>;
+  return <HCOperationalTable columns={columns} rows={rows} />;
 }
 
 function ActionCard({title,body,cta}:{title:string;body:string;cta:string}) {
