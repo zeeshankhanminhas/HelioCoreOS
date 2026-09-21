@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import type { ColumnDef } from "@tanstack/react-table";
+import { hcTableFeatures } from "@/components/heliocore/hc-data-table";
 import { HCDataTable } from "./hc-data-table";
 import { HCStatusBadge, type HCTone } from "./hc-status-badge";
 
@@ -14,8 +15,8 @@ export type OperationalRow = {
 };
 
 export function HCOperationalTable({ columns, rows }: { columns: string[]; rows: OperationalRow[] }) {
-  const tableColumns = React.useMemo<ColumnDef<OperationalRow>[]>(() => {
-    const result: ColumnDef<OperationalRow>[] = [
+  const tableColumns = React.useMemo<ColumnDef<typeof hcTableFeatures, OperationalRow>[]>(() => {
+    const result: ColumnDef<typeof hcTableFeatures, OperationalRow>[] = [
       {
         accessorKey: "primary",
         header: columns[0] ?? "Item",
