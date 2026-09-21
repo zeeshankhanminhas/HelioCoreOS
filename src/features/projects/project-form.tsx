@@ -37,7 +37,7 @@ export function ProjectForm({ onSubmit, submitting }: { onSubmit: (values: Creat
           <Input id="project-location" className={inputClass} aria-invalid={Boolean(form.formState.errors.location)} {...form.register("location")} />
         </HCFormField>
         <HCFormField label="Capacity (MWp)" htmlFor="project-capacity" error={form.formState.errors.capacityMwp?.message}>
-          <Input id="project-capacity" type="number" step="0.1" className={inputClass} aria-invalid={Boolean(form.formState.errors.capacityMwp)} {...form.register("capacityMwp")} />
+          <Input id="project-capacity" type="number" step="0.1" className={inputClass} aria-invalid={Boolean(form.formState.errors.capacityMwp)} {...form.register("capacityMwp", { valueAsNumber: true })} />
         </HCFormField>
         <HCFormField label="System configuration" htmlFor="project-system" error={form.formState.errors.system?.message}>
           <Input id="project-system" className={inputClass} aria-invalid={Boolean(form.formState.errors.system)} {...form.register("system")} />
